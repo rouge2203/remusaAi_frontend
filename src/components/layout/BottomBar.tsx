@@ -1,25 +1,30 @@
-import { HiOutlineHome, HiOutlineMagnifyingGlass, HiOutlineCog6Tooth } from 'react-icons/hi2'
-import { PiEngineBold } from 'react-icons/pi'
+import { HiOutlineHome, HiOutlinePlus, HiOutlineSquares2X2, HiOutlineArrowPath } from 'react-icons/hi2'
 
 const buttons = [
-  { icon: HiOutlineHome, label: 'Inicio' },
-  { icon: HiOutlineMagnifyingGlass, label: 'Buscar' },
-  { icon: PiEngineBold, label: 'Partes' },
-  { icon: HiOutlineCog6Tooth, label: 'Config' },
+  { icon: HiOutlineHome, active: true },
+  { icon: HiOutlinePlus, active: false },
+  { icon: HiOutlineSquares2X2, active: false },
+  { icon: HiOutlineArrowPath, active: false },
 ];
+
+const barWidth =
+  'w-full max-w-full lg:max-w-[600px] xl:max-w-[680px] mx-auto';
 
 export default function BottomBar() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-bg-primary/80 backdrop-blur-xl border-t border-border-subtle">
-      <div className="max-w-lg mx-auto flex items-center justify-around px-4 h-16 pb-[env(safe-area-inset-bottom)]">
-        {buttons.map((btn) => (
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#0b0b0c]/95 backdrop-blur-md border-t border-white/5 lg:border-white/10 lg:bg-[#0b0b0c]/90">
+      <div className={`${barWidth} flex items-center justify-center gap-5 px-6 h-[72px] pb-[env(safe-area-inset-bottom)] lg:gap-6 lg:h-20`}>
+        {buttons.map((btn, index) => (
           <button
-            key={btn.label}
+            key={index}
             disabled
-            className="flex flex-col items-center gap-1 px-4 py-2 rounded-2xl text-text-muted opacity-50 cursor-not-allowed transition-all duration-200"
+            className={`flex items-center justify-center w-[52px] h-[52px] lg:w-14 lg:h-14 rounded-full transition-all duration-300 ${
+              btn.active
+                ? 'bg-[#75141C] text-white shadow-lg shadow-[#75141C]/35'
+                : 'bg-[#1a1a1d] text-white border border-white/10 opacity-90'
+            } cursor-not-allowed`}
           >
-            <btn.icon className="text-xl" />
-            <span className="text-[10px] font-medium">{btn.label}</span>
+            <btn.icon className="text-[22px] lg:text-2xl" strokeWidth={1.75} />
           </button>
         ))}
       </div>

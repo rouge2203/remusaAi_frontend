@@ -1,0 +1,25 @@
+{
+  "name": "Catálogo de Remusa",
+  "short_name": "Remusa",
+  "description": "Cross-references mundiales e implementación de inteligencia artificial.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ececf0",
+  "theme_color": "#75141C",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icon-remusa.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-remusa.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "maskable"
+    }
+  ]
+}

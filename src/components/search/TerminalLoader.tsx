@@ -4,9 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 interface TerminalLoaderProps {
   messages: string[];
   active: boolean;
+  /** light = on white card (neutral). dark = on colored/dark panels. */
+  variant?: 'light' | 'dark';
 }
 
-export default function TerminalLoader({ messages, active }: TerminalLoaderProps) {
+export default function TerminalLoader({ messages, active, variant = 'dark' }: TerminalLoaderProps) {
   const [visibleLines, setVisibleLines] = useState<string[]>([]);
 
   useEffect(() => {
@@ -23,39 +25,48 @@ export default function TerminalLoader({ messages, active }: TerminalLoaderProps
         setVisibleLines(prev => [...prev, messages[current]]);
         current++;
       }
-    }, 800);
+    }, 700);
 
     return () => clearInterval(interval);
   }, [active, messages]);
 
   if (!active) return null;
 
+  const shell =
+    variant === 'light'
+      ? 'mt-3 rounded-2xl border border-neutral-200 bg-neutral-100/90 p-3 font-mono text-[11px] leading-relaxed text-neutral-600 shadow-inner'
+      : 'mt-3 rounded-2xl border border-white/10 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-neutral-300 shadow-inner';
+
+  const prompt = variant === 'light' ? 'text-neutral-400' : 'text-white/35';
+  const lineText = variant === 'light' ? 'text-neutral-700' : 'text-neutral-200';
+  const cursor = variant === 'light' ? 'text-neutral-500' : 'text-white/50';
+
   return (
     <motion.div
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="mt-3 rounded-xl bg-[#0D1117] border border-[#1B2430] p-3 font-mono text-xs overflow-hidden"
+      transition={{ duration: 0.28, ease: 'easeOut' }}
+      className={`${shell} overflow-hidden`}
     >
       <AnimatePresence>
         {visibleLines.map((line, i) => (
           <motion.div
             key={`${line}-${i}`}
-            initial={{ opacity: 0, x: -10 }}
+            initial={{ opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="flex items-center gap-2 py-0.5"
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="flex items-start gap-2 py-0.5"
           >
-            <span className="text-accent-green">{'>'}</span>
-            <span className="text-accent-green/80">{line}</span>
+            <span className={prompt}>{'›'}</span>
+            <span className={lineText}>{line}</span>
           </motion.div>
         ))}
       </AnimatePresence>
 
       <div className="flex items-center gap-2 py-0.5 mt-0.5">
-        <span className="text-accent-green">{'>'}</span>
-        <span className="animate-blink text-accent-green">_</span>
+        <span className={prompt}>{'›'}</span>
+        <span className={`animate-blink ${cursor}`}>_</span>
       </div>
     </motion.div>
   );

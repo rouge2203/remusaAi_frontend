@@ -1,37 +1,44 @@
-import { useState } from 'react'
-import { HiOutlinePaperAirplane } from 'react-icons/hi2'
+import { useState } from "react";
+import { HiOutlinePaperAirplane } from "react-icons/hi2";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
 }
 
 export default function ChatInput({ onSend }: ChatInputProps) {
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (value.trim()) {
       onSend(value.trim());
-      setValue('');
+      setValue("");
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 p-4 border-t border-white/5">
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Escribe tu pregunta..."
-        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-orange/50 transition-colors duration-300"
-      />
-      <button
-        type="submit"
-        disabled={!value.trim()}
-        className="w-11 h-11 rounded-xl bg-accent-orange flex items-center justify-center text-white transition-all duration-200 hover:brightness-110 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
-      >
-        <HiOutlinePaperAirplane className="text-lg" />
-      </button>
+    <form
+      onSubmit={handleSubmit}
+      className="shrink-0 border-t border-neutral-200/90 bg-white px-4 py-3.5 sm:px-5"
+    >
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="Escribe tu pregunta..."
+          className="min-w-0 flex-1 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#75141C] focus:outline-none focus:ring-2 focus:ring-[#75141C]/15"
+        />
+        <button
+          type="submit"
+          disabled={!value.trim()}
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#75141C] text-white transition-all duration-200 hover:bg-[#5c1018] active:scale-95 disabled:opacity-35 disabled:hover:bg-[#75141C]"
+          aria-label="Enviar"
+        >
+          <HiOutlinePaperAirplane className="text-lg" />
+        </button>
+      </div>
+      <p className="mt-2 font-mono text-[10px] text-neutral-400">enter para enviar</p>
     </form>
   );
 }

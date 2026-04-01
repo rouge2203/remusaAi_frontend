@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import type { SearchState, SearchMode, VehicleInfo, VinDecodeResult, PartResult } from '../types'
+import type { SearchState, SearchMode } from '../types'
 import { searchByPlate, decodeVin, searchByPartCode } from '../lib/api'
 
 const PLATE_MESSAGES = [
@@ -28,7 +28,7 @@ const PART_MESSAGES = [
 
 export function useSearch() {
   const [state, setState] = useState<SearchState>({
-    activeBlock: null,
+    activeBlock: 'plate',
     loading: false,
     loadingMessages: [],
     vehicleInfo: null,
@@ -44,19 +44,17 @@ export function useSearch() {
     }));
   }, []);
 
-  const clearResults = useCallback(() => {
+  const handlePlateSearch = useCallback(async (plate: string) => {
     setState(prev => ({
       ...prev,
       vehicleInfo: null,
       vinDecode: null,
       partResults: [],
       error: null,
+      activeBlock: 'plate',
+      loading: true,
+      loadingMessages: PLATE_MESSAGES,
     }));
-  }, []);
-
-  const handlePlateSearch = useCallback(async (plate: string) => {
-    clearResults();
-    setState(prev => ({ ...prev, loading: true, loadingMessages: PLATE_MESSAGES, error: null }));
 
     try {
       const { vehicle, vinDecode } = await searchByPlate(plate);
@@ -75,11 +73,19 @@ export function useSearch() {
         error: 'Error al buscar placa. Intente de nuevo.',
       }));
     }
-  }, [clearResults]);
+  }, []);
 
   const handleVinSearch = useCallback(async (vin: string) => {
-    clearResults();
-    setState(prev => ({ ...prev, loading: true, loadingMessages: VIN_MESSAGES, error: null }));
+    setState(prev => ({
+      ...prev,
+      vehicleInfo: null,
+      vinDecode: null,
+      partResults: [],
+      error: null,
+      activeBlock: 'vin',
+      loading: true,
+      loadingMessages: VIN_MESSAGES,
+    }));
 
     try {
       const { vinDecode } = await decodeVin(vin);
@@ -97,11 +103,19 @@ export function useSearch() {
         error: 'Error al decodificar VIN. Intente de nuevo.',
       }));
     }
-  }, [clearResults]);
+  }, []);
 
   const handlePartSearch = useCallback(async (code: string) => {
-    clearResults();
-    setState(prev => ({ ...prev, loading: true, loadingMessages: PART_MESSAGES, error: null }));
+    setState(prev => ({
+      ...prev,
+      vehicleInfo: null,
+      vinDecode: null,
+      partResults: [],
+      error: null,
+      activeBlock: 'partCode',
+      loading: true,
+      loadingMessages: PART_MESSAGES,
+    }));
 
     try {
       const { parts } = await searchByPartCode(code);
@@ -119,7 +133,7 @@ export function useSearch() {
         error: 'Error al buscar pieza. Intente de nuevo.',
       }));
     }
-  }, [clearResults]);
+  }, []);
 
   return {
     state,

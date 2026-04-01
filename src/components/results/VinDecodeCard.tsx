@@ -1,7 +1,8 @@
-import { motion } from 'framer-motion'
-import { HiOutlineFingerPrint } from 'react-icons/hi2'
-import type { VinDecodeResult } from '../../types'
-import InfoRow from './InfoRow'
+import { motion } from "framer-motion";
+import { HiOutlineFingerPrint } from "react-icons/hi2";
+import type { VinDecodeResult } from "../../types";
+import InfoRow from "./InfoRow";
+import CollapsibleResultCard from "./CollapsibleResultCard";
 
 interface VinDecodeCardProps {
   vinDecode: VinDecodeResult;
@@ -13,45 +14,42 @@ export default function VinDecodeCard({ vinDecode, index }: VinDecodeCardProps) 
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut', delay: index * 0.1 }}
-      className="rounded-2xl border border-border-subtle bg-bg-card overflow-hidden"
+      transition={{ duration: 0.35, ease: "easeOut", delay: index * 0.05 }}
     >
-      <div className="p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-accent-blue/10 flex items-center justify-center">
-            <HiOutlineFingerPrint className="text-xl text-accent-blue" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-text-primary">Decodificación VIN</h3>
-            <p className="text-xs text-text-secondary">{vinDecode.matchingMode}</p>
-          </div>
+      <CollapsibleResultCard
+        defaultOpen
+        title="Decodificación VIN"
+        subtitle={`${vinDecode.brand} · ${vinDecode.epc.toUpperCase() || "EPC"}`}
+        icon={<HiOutlineFingerPrint className="text-2xl" strokeWidth={1.5} />}
+        meta={<span className="text-neutral-400">{vinDecode.matchingMode}</span>}
+      >
+        <div className="rounded-xl border border-neutral-200/80 bg-white p-3 shadow-sm space-y-0">
+          <InfoRow label="EPC" value={vinDecode.epc.toUpperCase()} highlight surface="light" />
+          <InfoRow label="Marca" value={vinDecode.brand} surface="light" />
+          <InfoRow label="Año modelo" value={vinDecode.modelYear} surface="light" />
+          <InfoRow label="Fabricación" value={vinDecode.buildDate} surface="light" />
+          <InfoRow label="País" value={vinDecode.madeIn} surface="light" />
+
+          {model && (
+            <>
+              <div className="my-2 border-t border-neutral-200 pt-3">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+                  Modelo identificado
+                </span>
+              </div>
+              <InfoRow label="Modelo" value={model.model} surface="light" />
+              <InfoRow label="Motor" value={model.engine} surface="light" />
+              <InfoRow label="Cilindrada" value={`${model.cc} cc`} surface="light" />
+              <InfoRow label="Transmisión" value={model.transmission} surface="light" />
+              <InfoRow label="Tracción" value={model.drive} surface="light" />
+              <InfoRow label="Serie" value={model.series} surface="light" />
+              <InfoRow label="Planta" value={model.factory} surface="light" />
+            </>
+          )}
         </div>
-
-        <InfoRow label="EPC" value={vinDecode.epc.toUpperCase()} highlight />
-        <InfoRow label="Marca" value={vinDecode.brand} />
-        <InfoRow label="Año Modelo" value={vinDecode.modelYear} />
-        <InfoRow label="Fabricación" value={vinDecode.buildDate} />
-        <InfoRow label="País" value={vinDecode.madeIn} />
-
-        {model && (
-          <>
-            <div className="mt-3 mb-2 pt-3 border-t border-white/5">
-              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                Modelo Identificado
-              </span>
-            </div>
-            <InfoRow label="Modelo" value={model.model} />
-            <InfoRow label="Motor" value={model.engine} />
-            <InfoRow label="Cilindrada" value={`${model.cc} cc`} />
-            <InfoRow label="Transmisión" value={model.transmission} />
-            <InfoRow label="Tracción" value={model.drive} />
-            <InfoRow label="Serie" value={model.series} />
-            <InfoRow label="Planta" value={model.factory} />
-          </>
-        )}
-      </div>
+      </CollapsibleResultCard>
     </motion.div>
   );
 }

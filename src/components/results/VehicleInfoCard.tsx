@@ -1,7 +1,8 @@
-import { motion } from 'framer-motion'
-import { HiOutlineTruck } from 'react-icons/hi2'
-import type { VehicleInfo } from '../../types'
-import InfoRow from './InfoRow'
+import { motion } from "framer-motion";
+import { HiOutlineTruck } from "react-icons/hi2";
+import type { VehicleInfo } from "../../types";
+import InfoRow from "./InfoRow";
+import CollapsibleResultCard from "./CollapsibleResultCard";
 
 interface VehicleInfoCardProps {
   vehicle: VehicleInfo;
@@ -9,50 +10,64 @@ interface VehicleInfoCardProps {
 }
 
 export default function VehicleInfoCard({ vehicle, index }: VehicleInfoCardProps) {
+  const title = `${vehicle.carMake} ${vehicle.carModel}`.trim();
+  const subtitle = [vehicle.registrationYear, vehicle.colour].filter(Boolean).join(" · ");
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut', delay: index * 0.1 }}
-      className="rounded-2xl border border-border-subtle bg-bg-card overflow-hidden"
+      transition={{ duration: 0.35, ease: "easeOut", delay: index * 0.05 }}
     >
-      {vehicle.imageUrl && (
-        <div className="relative h-40 overflow-hidden">
-          <img
-            src={vehicle.imageUrl}
-            alt={vehicle.carModel}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-bg-card via-transparent to-transparent" />
-          <div className="absolute bottom-3 left-4 right-4">
-            <h3 className="text-base font-bold text-white drop-shadow-lg">
-              {vehicle.carMake} {vehicle.carModel}
-            </h3>
-            <p className="text-xs text-white/70 mt-0.5">{vehicle.registrationYear} &middot; {vehicle.colour}</p>
+      <CollapsibleResultCard
+        defaultOpen
+        title={title || "Vehículo"}
+        subtitle={subtitle || "Costa Rica"}
+        icon={<HiOutlineTruck className="text-2xl" strokeWidth={1.5} />}
+        meta={
+          <span className="text-neutral-400">
+            {vehicle.body && `${vehicle.body}`}
+            {vehicle.body && vehicle.fuel ? " · " : ""}
+            {vehicle.fuel && `${vehicle.fuel}`}
+          </span>
+        }
+      >
+        <div className="space-y-3">
+          <div className="rounded-xl border border-neutral-200/80 bg-white p-3 shadow-sm">
+            <div className="flex gap-3 min-w-0">
+              <div className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-xl bg-neutral-100">
+                {vehicle.imageUrl ? (
+                  <img src={vehicle.imageUrl} alt={title} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-neutral-400">
+                    <HiOutlineTruck className="text-3xl" />
+                  </div>
+                )}
+                {vehicle.engineSize && (
+                  <span className="absolute bottom-1 left-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    {vehicle.engineSize}
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1 pt-0.5">
+                <p className="text-sm font-semibold text-neutral-900">Registro vehicular</p>
+                <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
+                  Datos desde RegCheck CR. Revise VIN y motor antes de pedir partes.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-neutral-200/80 bg-white p-3 shadow-sm">
+            <InfoRow label="VIN" value={vehicle.vin} highlight surface="light" />
+            <InfoRow label="Motor" value={`${vehicle.engineCode} — ${vehicle.engineSize}`} surface="light" />
+            <InfoRow label="Combustible" value={vehicle.fuel} surface="light" />
+            <InfoRow label="Carrocería" value={vehicle.body} surface="light" />
+            <InfoRow label="Tracción" value={vehicle.wheelPlan} surface="light" />
+            {vehicle.owner && <InfoRow label="Estado" value={vehicle.owner} surface="light" />}
           </div>
         </div>
-      )}
-
-      <div className="p-4">
-        {!vehicle.imageUrl && (
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-accent-orange/10 flex items-center justify-center">
-              <HiOutlineTruck className="text-xl text-accent-orange" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-text-primary">{vehicle.carMake} {vehicle.carModel}</h3>
-              <p className="text-xs text-text-secondary">{vehicle.registrationYear}</p>
-            </div>
-          </div>
-        )}
-
-        <InfoRow label="VIN" value={vehicle.vin} highlight />
-        <InfoRow label="Motor" value={`${vehicle.engineCode} - ${vehicle.engineSize}`} />
-        <InfoRow label="Combustible" value={vehicle.fuel} />
-        <InfoRow label="Carrocería" value={vehicle.body} />
-        <InfoRow label="Tracción" value={vehicle.wheelPlan} />
-        {vehicle.owner && <InfoRow label="Estado" value={vehicle.owner} />}
-      </div>
+      </CollapsibleResultCard>
     </motion.div>
   );
 }
