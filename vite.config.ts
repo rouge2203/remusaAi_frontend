@@ -12,9 +12,7 @@ export default defineConfig(({ mode }) => {
   const rapidKey = env.VITE_RAPIDAPI_KEY || env.RAPIDAPI_KEY || "";
 
   const siteUrl = env.VITE_SITE_URL?.replace(/\/$/, "") ?? "";
-  const ogImage = siteUrl
-    ? `${siteUrl}/icon-remusa.webp`
-    : "/icon-remusa.webp";
+  const ogImage = siteUrl ? `${siteUrl}/icon-remusa.webp` : "/icon-remusa.webp";
 
   return {
     plugins: [
@@ -28,7 +26,14 @@ export default defineConfig(({ mode }) => {
       },
     ],
     server: {
+      // Listen on 0.0.0.0 so other devices on the same Wi‑Fi can open http://<your-lan-ip>:5173
+      host: true,
       proxy: {
+        "/api": {
+          // target: "http://localhost:8000",
+          target: "http://45.55.51.15",
+          changeOrigin: true,
+        },
         "/proxy17vin": {
           target: "http://api.17vin.com:8080",
           changeOrigin: true,

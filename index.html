@@ -2,12 +2,52 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/webp" href="/icon-remusa.webp" />
     <link rel="apple-touch-icon" href="/icon-remusa.webp" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#75141C" />
-    <meta name="description" content="Cross-references mundiales e implementación de inteligencia artificial." />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <!-- iOS Safari uses BOTH prefers-color-scheme metas; a single tag is ignored in dark mode. -->
+    <meta
+      name="theme-color"
+      content="#ffffff"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#ffffff"
+      media="(prefers-color-scheme: dark)"
+    />
+    <script>
+      (function () {
+        var ua = navigator.userAgent;
+        var ios =
+          /iPad|iPhone|iPod/.test(ua) ||
+          (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        var safariIos = ios && !/CriOS|FxiOS|EdgiOS/i.test(ua);
+        if (safariIos) {
+          document.documentElement.style.colorScheme = "light";
+          return;
+        }
+        document
+          .querySelectorAll('meta[name="theme-color"]')
+          .forEach(function (m) {
+            m.remove();
+          });
+        var m = document.createElement("meta");
+        m.setAttribute("name", "theme-color");
+        m.setAttribute("content", "#75141C");
+        document.head.appendChild(m);
+      })();
+    </script>
+    <!-- Light status bar when added to Home Screen; also nudges Safari toward a light top chrome. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta
+      name="description"
+      content="Cross-references mundiales e implementación de inteligencia artificial."
+    />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Remusa" />
     <meta name="application-name" content="Catálogo de Remusa" />
@@ -16,7 +56,10 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Remusa" />
     <meta property="og:title" content="Catálogo de Remusa" />
-    <meta property="og:description" content="Cross-references mundiales e implementación de inteligencia artificial." />
+    <meta
+      property="og:description"
+      content="Cross-references mundiales e implementación de inteligencia artificial."
+    />
     <meta property="og:image" content="__OG_IMAGE__" />
     <meta property="og:image:type" content="image/webp" />
     <meta property="og:locale" content="es_CR" />
@@ -24,13 +67,19 @@
     <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Catálogo de Remusa" />
-    <meta name="twitter:description" content="Cross-references mundiales e implementación de inteligencia artificial." />
+    <meta
+      name="twitter:description"
+      content="Cross-references mundiales e implementación de inteligencia artificial."
+    />
     <meta name="twitter:image" content="__OG_IMAGE__" />
 
     <title>Catálogo de Remusa · RemusaAI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

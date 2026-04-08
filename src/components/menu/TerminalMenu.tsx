@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { MenuItem } from "../../constants/remusaMenu";
+import { MenuTerminalRow } from "./MenuTerminalRow";
 
 interface TerminalMenuProps {
   title?: string;
@@ -7,6 +8,8 @@ interface TerminalMenuProps {
   /** Which row looks “selected” (gray panel) — defaults to first */
   defaultSelectedId?: string;
   onSelect?: (item: MenuItem) => void;
+  /** Optional footer under the list (omit to hide). */
+  footer?: ReactNode;
 }
 
 export default function TerminalMenu({
@@ -14,6 +17,7 @@ export default function TerminalMenu({
   items,
   defaultSelectedId,
   onSelect,
+  footer,
 }: TerminalMenuProps) {
   const first = items[0]?.id ?? "";
   const [selectedId, setSelectedId] = useState(defaultSelectedId ?? first);
@@ -23,40 +27,26 @@ export default function TerminalMenu({
       <p className="mb-2 px-1 font-mono text-[10px] font-medium uppercase tracking-widest text-neutral-400">
         {`> ${title}`}
       </p>
-      <ul className="flex flex-col gap-1">
+      <ul className="flex max-h-[50vh] flex-col gap-1 overflow-y-auto">
         {items.map((item) => {
           const active = selectedId === item.id;
           return (
             <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedId(item.id);
-                  onSelect?.(item);
+              <MenuTerminalRow
+                item={item}
+                active={active}
+                onSelect={(i) => {
+                  setSelectedId(i.id);
+                  onSelect?.(i);
                 }}
-                className={`w-full rounded-xl px-3 py-3 text-left font-mono transition-colors ${
-                  active
-                    ? "bg-neutral-100 text-neutral-900"
-                    : "text-neutral-800 hover:bg-neutral-50"
-                }`}
-              >
-                <span className="block text-[13px] font-semibold leading-snug lowercase">
-                  <span className="text-neutral-400 font-normal">{"> "}</span>
-                  {item.title}
-                </span>
-                {item.subtitle ? (
-                  <span className="mt-0.5 block pl-4 text-[11px] font-normal leading-snug text-neutral-500">
-                    {item.subtitle}
-                  </span>
-                ) : null}
-              </button>
+              />
             </li>
           );
         })}
       </ul>
-      <p className="mt-2 px-1 font-mono text-[10px] text-neutral-400">
-        opciones desde sistema remusa (prox. integracion)
-      </p>
+      {footer != null ? (
+        <div className="mt-2 px-1 font-mono text-[10px] text-neutral-400">{footer}</div>
+      ) : null}
     </div>
   );
 }

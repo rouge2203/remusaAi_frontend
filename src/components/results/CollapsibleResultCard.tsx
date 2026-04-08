@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { HiChevronDown } from "react-icons/hi2";
 
@@ -16,6 +16,10 @@ interface CollapsibleResultCardProps {
   children: ReactNode;
   /** Open by default; tap header to collapse */
   defaultOpen?: boolean;
+  /** Increments when a catalog menu option is chosen — collapses the card. */
+  collapseSignal?: number;
+  /** Increments on new plate/VIN search — expands the card. */
+  expandSignal?: number;
   className?: string;
 }
 
@@ -26,9 +30,19 @@ export default function CollapsibleResultCard({
   meta,
   children,
   defaultOpen = true,
+  collapseSignal = 0,
+  expandSignal = 0,
   className = "",
 }: CollapsibleResultCardProps) {
   const [open, setOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    if (collapseSignal > 0) setOpen(false);
+  }, [collapseSignal]);
+
+  useEffect(() => {
+    if (expandSignal > 0) setOpen(true);
+  }, [expandSignal]);
 
   return (
     <div

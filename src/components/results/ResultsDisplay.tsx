@@ -1,65 +1,109 @@
 import type { ReactNode } from "react";
-import type { VehicleInfo, VinDecodeResult, PartResult } from "../../types";
+import type {
+  VehicleInfo,
+  VinDecodeResult,
+  PartResult,
+  RemusaHit,
+  CatalogSession,
+  TecdocVehicleOption,
+  TecdocModelOption,
+} from "../../types";
 import VehicleInfoCard from "./VehicleInfoCard";
 import VinDecodeCard from "./VinDecodeCard";
-import PartCard from "./PartCard";
-import TerminalMenu from "../menu/TerminalMenu";
-import {
-  MENU_CATALOG_EPC,
-  MENU_PART_DETAIL,
-  MENU_TECDOC_FALLBACK,
-} from "../../constants/remusaMenu";
+import TecdocModelPicker from "../catalog/TecdocModelPicker";
+import TecdocVehiclePicker from "../catalog/TecdocVehiclePicker";
+import EpcCatalogHub from "../catalog/EpcCatalogHub";
+import TecdocCatalogHub from "../catalog/TecdocCatalogHub";
+import PartSearchResultsHub from "../catalog/PartSearchResultsHub";
 
 interface ResultsDisplayProps {
   vehicleInfo: VehicleInfo | null;
   vinDecode: VinDecodeResult | null;
+  vinDecodeRaw: Record<string, unknown> | null;
   partResults: PartResult[];
+  partRemusaMap: Record<string, RemusaHit>;
+  partDirectRemusa: RemusaHit | null;
+  catalogSession: CatalogSession | null;
+  tecdocModelPicklist: TecdocModelOption[] | null;
+  tecdocPicklist: TecdocVehicleOption[] | null;
+  onResetCatalog: () => void;
+  onSelectTecdocModel: (o: TecdocModelOption) => void | Promise<void>;
+  onSelectTecdocVehicle: (o: TecdocVehicleOption) => void;
 }
 
-export default function ResultsDisplay({ vehicleInfo, vinDecode, partResults }: ResultsDisplayProps) {
-  const hasResults = vehicleInfo || vinDecode || partResults.length > 0;
-  if (!hasResults) return null;
+export default function ResultsDisplay({
+  vehicleInfo,
+  vinDecode,
+  vinDecodeRaw,
+  partResults,
+  partRemusaMap,
+  partDirectRemusa,
+  catalogSession,
+  tecdocModelPicklist,
+  tecdocPicklist,
+  onResetCatalog,
+  onSelectTecdocModel,
+  onSelectTecdocVehicle,
+}: ResultsDisplayProps) {
+  const hasPartData = partResults.length > 0 || partDirectRemusa != null;
+  const hasResults = vehicleInfo || vinDecode || hasPartData;
+  if (!hasResults && !catalogSession && !tecdocPicklist?.length && !tecdocModelPicklist?.length)
+    return null;
 
   const blocks: ReactNode[] = [];
   let anim = 0;
-
-  const epc = vinDecode?.epc?.trim();
-
-  if (vinDecode && epc) {
-    blocks.push(
-      <TerminalMenu key="menu-epc" title="catalogo epc (17vin)" items={MENU_CATALOG_EPC} />,
-    );
-  } else if (vehicleInfo && vinDecode && !epc) {
-    blocks.push(
-      <TerminalMenu
-        key="menu-tecdoc"
-        title="catalogo tecdoc (respaldo)"
-        items={MENU_TECDOC_FALLBACK}
-      />,
-    );
-  } else if (vehicleInfo && !vinDecode) {
-    blocks.push(
-      <TerminalMenu
-        key="menu-tecdoc"
-        title="catalogo tecdoc (respaldo)"
-        items={MENU_TECDOC_FALLBACK}
-      />,
-    );
-  } else if (partResults.length > 0 && !vehicleInfo && !vinDecode) {
-    blocks.push(
-      <TerminalMenu key="menu-part" title="pieza seleccionada" items={MENU_PART_DETAIL} />,
-    );
-  }
 
   if (vehicleInfo) {
     blocks.push(<VehicleInfoCard key="veh" vehicle={vehicleInfo} index={anim++} />);
   }
   if (vinDecode) {
-    blocks.push(<VinDecodeCard key="vin" vinDecode={vinDecode} index={anim++} />);
+    blocks.push(
+      <VinDecodeCard
+        key="vin"
+        vinDecode={vinDecode}
+        decodeData={vinDecodeRaw}
+        index={anim++}
+      />,
+    );
   }
-  partResults.forEach((part, i) => {
-    blocks.push(<PartCard key={`${part.partNumber}-${i}`} part={part} index={anim++} />);
-  });
+
+  if (tecdocModelPicklist && tecdocModelPicklist.length > 0) {
+    blocks.push(
+      <TecdocModelPicker
+        key="td-models"
+        options={tecdocModelPicklist}
+        onSelect={(o) => void onSelectTecdocModel(o)}
+      />,
+    );
+  }
+  if (tecdocPicklist && tecdocPicklist.length > 0) {
+    blocks.push(
+      <TecdocVehiclePicker key="td-pick" options={tecdocPicklist} onSelect={onSelectTecdocVehicle} />,
+    );
+  }
+
+  if (catalogSession?.mode === "epc" && catalogSession.epc) {
+    blocks.push(
+      <EpcCatalogHub key="epc-hub" session={catalogSession} onBack={onResetCatalog} />,
+    );
+  }
+
+  if (catalogSession?.mode === "tecdoc" && catalogSession.tecdocVehicleId) {
+    blocks.push(
+      <TecdocCatalogHub key="td-hub" session={catalogSession} onBack={onResetCatalog} />,
+    );
+  }
+
+  if (hasPartData) {
+    blocks.push(
+      <PartSearchResultsHub
+        key="part-hub"
+        parts={partResults}
+        remusaMap={partRemusaMap}
+        directRemusa={partDirectRemusa}
+      />,
+    );
+  }
 
   return <div className="flex flex-col gap-4">{blocks}</div>;
 }

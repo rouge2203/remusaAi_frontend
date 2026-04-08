@@ -1,16 +1,23 @@
 import { motion } from "framer-motion";
 import { HiOutlineFingerPrint } from "react-icons/hi2";
 import type { VinDecodeResult } from "../../types";
+import { useResultsInfoCollapse } from "../../contexts/ResultsInfoCollapseContext";
+import { extractVinFactorySpecs } from "../../lib/extractVinFactorySpecs";
 import InfoRow from "./InfoRow";
 import CollapsibleResultCard from "./CollapsibleResultCard";
 
 interface VinDecodeCardProps {
   vinDecode: VinDecodeResult;
+  /** Raw 17VIN `data` (option codes / factory attrs). */
+  decodeData?: Record<string, unknown> | null;
   index: number;
 }
 
-export default function VinDecodeCard({ vinDecode, index }: VinDecodeCardProps) {
+export default function VinDecodeCard({ vinDecode, decodeData, index }: VinDecodeCardProps) {
+  const infoCollapse = useResultsInfoCollapse();
   const model = vinDecode.models[0];
+  const isTecdoc = vinDecode.epc === "tecdoc";
+  const factorySpecs = extractVinFactorySpecs(decodeData ?? null);
 
   return (
     <motion.div
@@ -20,6 +27,8 @@ export default function VinDecodeCard({ vinDecode, index }: VinDecodeCardProps) 
     >
       <CollapsibleResultCard
         defaultOpen
+        collapseSignal={infoCollapse?.collapseTick ?? 0}
+        expandSignal={infoCollapse?.expandTick ?? 0}
         title="Decodificación VIN"
         subtitle={`${vinDecode.brand} · ${vinDecode.epc.toUpperCase() || "EPC"}`}
         icon={<HiOutlineFingerPrint className="text-2xl" strokeWidth={1.5} />}
@@ -27,10 +36,16 @@ export default function VinDecodeCard({ vinDecode, index }: VinDecodeCardProps) 
       >
         <div className="rounded-xl border border-neutral-200/80 bg-white p-3 shadow-sm space-y-0">
           <InfoRow label="EPC" value={vinDecode.epc.toUpperCase()} highlight surface="light" />
-          <InfoRow label="Marca" value={vinDecode.brand} surface="light" />
+          {isTecdoc ? <InfoRow label="Marca" value={vinDecode.brand} surface="light" /> : null}
+          {vinDecode.modelSpecification ? (
+            <InfoRow label="Modelo" value={vinDecode.modelSpecification} surface="light" />
+          ) : null}
           <InfoRow label="Año modelo" value={vinDecode.modelYear} surface="light" />
           <InfoRow label="Fabricación" value={vinDecode.buildDate} surface="light" />
           <InfoRow label="País" value={vinDecode.madeIn} surface="light" />
+          {factorySpecs.map((row) => (
+            <InfoRow key={row.label} label={row.label} value={row.value} surface="light" />
+          ))}
 
           {model && (
             <>

@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { HiOutlineTruck } from "react-icons/hi2";
+import { HiArrowsPointingOut, HiOutlineTruck } from "react-icons/hi2";
 import type { VehicleInfo } from "../../types";
+import { useResultsInfoCollapse } from "../../contexts/ResultsInfoCollapseContext";
 import InfoRow from "./InfoRow";
 import CollapsibleResultCard from "./CollapsibleResultCard";
+import DiagramLightbox from "../catalog/DiagramLightbox";
 
 interface VehicleInfoCardProps {
   vehicle: VehicleInfo;
@@ -10,6 +13,8 @@ interface VehicleInfoCardProps {
 }
 
 export default function VehicleInfoCard({ vehicle, index }: VehicleInfoCardProps) {
+  const infoCollapse = useResultsInfoCollapse();
+  const [imgOpen, setImgOpen] = useState(false);
   const title = `${vehicle.carMake} ${vehicle.carModel}`.trim();
   const subtitle = [vehicle.registrationYear, vehicle.colour].filter(Boolean).join(" · ");
 
@@ -21,6 +26,8 @@ export default function VehicleInfoCard({ vehicle, index }: VehicleInfoCardProps
     >
       <CollapsibleResultCard
         defaultOpen
+        collapseSignal={infoCollapse?.collapseTick ?? 0}
+        expandSignal={infoCollapse?.expandTick ?? 0}
         title={title || "Vehículo"}
         subtitle={subtitle || "Costa Rica"}
         icon={<HiOutlineTruck className="text-2xl" strokeWidth={1.5} />}
@@ -43,6 +50,17 @@ export default function VehicleInfoCard({ vehicle, index }: VehicleInfoCardProps
                     <HiOutlineTruck className="text-3xl" />
                   </div>
                 )}
+                {vehicle.imageUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setImgOpen(true)}
+                    className="absolute right-1 top-1 z-10 flex items-center gap-1 rounded-md border border-neutral-200/90 bg-white/95 px-1.5 py-1 font-mono text-[10px] font-medium text-neutral-800 shadow-sm backdrop-blur-sm transition hover:bg-white"
+                    aria-label="Ver imagen ampliada"
+                  >
+                    <HiArrowsPointingOut className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    Ver
+                  </button>
+                ) : null}
                 {vehicle.engineSize && (
                   <span className="absolute bottom-1 left-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                     {vehicle.engineSize}
@@ -64,10 +82,18 @@ export default function VehicleInfoCard({ vehicle, index }: VehicleInfoCardProps
             <InfoRow label="Combustible" value={vehicle.fuel} surface="light" />
             <InfoRow label="Carrocería" value={vehicle.body} surface="light" />
             <InfoRow label="Tracción" value={vehicle.wheelPlan} surface="light" />
-            {vehicle.owner && <InfoRow label="Estado" value={vehicle.owner} surface="light" />}
+            {vehicle.owner && <InfoRow label="Propietario" value={vehicle.owner} surface="light" />}
           </div>
         </div>
       </CollapsibleResultCard>
+      {vehicle.imageUrl ? (
+        <DiagramLightbox
+          open={imgOpen}
+          onClose={() => setImgOpen(false)}
+          src={vehicle.imageUrl}
+          alt={title}
+        />
+      ) : null}
     </motion.div>
   );
 }
