@@ -9,6 +9,7 @@ import TerminalLoader from "../search/TerminalLoader";
 import { PART_DETAIL_LOADING_MESSAGES, type PartDetailLoadingKey } from "../../constants/catalogLoadingMessages";
 import { MenuTerminalRow } from "../menu/MenuTerminalRow";
 import DiagramLightbox from "./DiagramLightbox";
+import { moneyCRC } from "./PartDetailShared";
 
 const CARD =
   "rounded-2xl border border-neutral-200/90 bg-white shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)] overflow-hidden";
@@ -341,6 +342,87 @@ export default function TecdocArticleDetailSheet({
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4">
             {detailLoading ? <p className="text-[11px] text-neutral-500">Cargando detalle completo…</p> : null}
 
+            {!remusaEntry && !remusaDetail ? (
+              <p className="rounded-xl border border-neutral-200/80 bg-white px-3 py-2 text-[11px] text-neutral-500 shadow-sm">
+                No encontrada en REMUSA (directa). Use equivalencias en el menú de acciones.
+              </p>
+            ) : null}
+
+            {(remusaEntry || remusaDetail) ? (
+              <SheetSection title={`REMUSA${articuloResolved ? ` · ${articuloResolved}` : ""}`} collapseSignal={collapseDetailSections}>
+                {remusaLoading ? (
+                  <p className="text-[11px] text-neutral-600">Cargando…</p>
+                ) : remusaDetail ? (
+                  (() => {
+                    const c1 = remusaDetail.clasificacion_1 as { codigo?: string; descripcion?: string } | undefined;
+                    const c2 = remusaDetail.clasificacion_2 as { codigo?: string; descripcion?: string } | undefined;
+                    const inv = (remusaDetail.inventario as Array<Record<string, unknown>>) ?? [];
+                    const precios = remusaDetail.precios as { mayoreo?: number | null; detalle?: number | null } | undefined;
+                    return (
+                      <>
+                        <DetailRow label="Código" value={String(remusaDetail.articulo ?? "")} highlight />
+                        <DetailRow label="Descripción" value={String(remusaDetail.descripcion ?? "")} />
+                        <DetailRow label="Match via" value={rmPn} />
+                        <DetailRow
+                          label="Activo"
+                          value={remusaDetail.activo === true ? "Sí" : remusaDetail.activo === false ? "No" : ""}
+                        />
+                        {c1?.codigo ? (
+                          <DetailRow label="Familia" value={`${c1.codigo} — ${c1.descripcion ?? ""}`.trim()} />
+                        ) : null}
+                        {c2?.codigo ? (
+                          <DetailRow label="Sub-familia" value={`${c2.codigo} — ${c2.descripcion ?? ""}`.trim()} />
+                        ) : null}
+                        <DetailRow label="Proveedor" value={String(remusaDetail.proveedor ?? "")} />
+                        <DetailRow label="Art. del proveedor" value={String(remusaDetail.articulo_del_proveedor ?? "")} />
+                        <DetailRow
+                          label="Unidad almacén / venta"
+                          value={`${String(remusaDetail.unidad_almacen ?? "")} / ${String(remusaDetail.unidad_venta ?? "")}`}
+                        />
+                        {precios ? (
+                          <div className="mt-2 border-t border-neutral-200 pt-2">
+                            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#75141C]/90">
+                              Precios
+                            </p>
+                            {precios.mayoreo != null ? (
+                              <DetailRow label="Mayoreo" value={moneyCRC(precios.mayoreo)} />
+                            ) : null}
+                            {precios.detalle != null ? (
+                              <DetailRow label="Detalle" value={moneyCRC(precios.detalle)} />
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <div className="mt-2 border-t border-neutral-200 pt-2">
+                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#75141C]/90">
+                            Inventario por bodega
+                          </p>
+                          {inv.length > 0 ? (
+                            <ul className="max-h-40 overflow-auto space-y-1 text-[10px] text-neutral-800">
+                              {inv.map((row, i) => (
+                                <li key={i} className="flex flex-wrap gap-x-2 border-b border-neutral-100/80 pb-1">
+                                  <span className="font-medium">{String(row.bodega)}</span>
+                                  <span className="text-neutral-500">{String(row.nombre)}</span>
+                                  <span>Disp: {String(row.disponible)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-[10px] text-neutral-400">Sin stock en bodegas</p>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()
+                ) : remusaEntry ? (
+                  <DetailRow
+                    label="Resumen"
+                    value={`${remusaEntry.hit.articulo} (${remusaEntry.hit.source})`}
+                    highlight
+                  />
+                ) : null}
+              </SheetSection>
+            ) : null}
+
             <SheetSection title="Artículo TecDoc" collapseSignal={collapseDetailSections}>
               <DetailRow label="Article ID" value={articleId} />
               <DetailRow label="Número" value={artNo} highlight />
@@ -377,32 +459,6 @@ export default function TecdocArticleDetailSheet({
                     />
                   ))}
                 </div>
-              </SheetSection>
-            ) : null}
-
-            {!remusaEntry && !remusaDetail ? (
-              <p className="rounded-xl border border-neutral-200/80 bg-white px-3 py-2 text-[11px] text-neutral-500 shadow-sm">
-                No encontrada en REMUSA (directa). Use equivalencias en el menú de acciones.
-              </p>
-            ) : null}
-
-            {(remusaEntry || remusaDetail) ? (
-              <SheetSection title={`REMUSA${articuloResolved ? ` · ${articuloResolved}` : ""}`} collapseSignal={collapseDetailSections}>
-                {remusaLoading ? (
-                  <p className="text-[11px] text-neutral-600">Cargando…</p>
-                ) : remusaDetail ? (
-                  <>
-                    <DetailRow label="Código" value={String(remusaDetail.articulo ?? "")} highlight />
-                    <DetailRow label="Descripción" value={String(remusaDetail.descripcion ?? "")} />
-                    <DetailRow label="Match via" value={rmPn} />
-                  </>
-                ) : remusaEntry ? (
-                  <DetailRow
-                    label="Resumen"
-                    value={`${remusaEntry.hit.articulo} (${remusaEntry.hit.source})`}
-                    highlight
-                  />
-                ) : null}
               </SheetSection>
             ) : null}
 

@@ -71,21 +71,28 @@ export function mapRegcheckToVehicleInfo(raw: Record<string, unknown>): VehicleI
   };
 }
 
+function _17vinImgProxy(path: string): string {
+  return `${API_ROOT}/epc/img/?path=${encodeURIComponent(path)}`;
+}
+
 export function imageUrlFromPart(epc: string, partImg?: string): string | undefined {
   if (!partImg) return undefined;
   const img = partImg.includes(",") ? partImg.split(",")[0].trim() : partImg;
   if (!img) return undefined;
-  if (img.startsWith("http")) return img;
-  if (img.includes("/")) return `http://resource.17vin.com/img/${img}`;
-  return `http://resource.17vin.com/img/${epc}/${img}`;
+  const fullPath = img.startsWith("http")
+    ? img.replace(/^https?:\/\/resource\.17vin\.com\/img\//, "")
+    : img.includes("/") ? img : `${epc}/${img}`;
+  return _17vinImgProxy(fullPath);
 }
 
 export function diagramUrl(epc: string, imgAddress?: string): string | undefined {
   if (!imgAddress) return undefined;
   const addr = imgAddress.includes(",") ? imgAddress.split(",")[0].trim() : imgAddress;
   if (!addr) return undefined;
-  if (addr.startsWith("http")) return addr;
-  return `http://resource.17vin.com/img/${epc}/${addr}`;
+  const fullPath = addr.startsWith("http")
+    ? addr.replace(/^https?:\/\/resource\.17vin\.com\/img\//, "")
+    : addr.includes("/") ? addr : `${epc}/${addr}`;
+  return _17vinImgProxy(fullPath);
 }
 
 /** Image URL from 17VIN parts/illustration API response (first match). */

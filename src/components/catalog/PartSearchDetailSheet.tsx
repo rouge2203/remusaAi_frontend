@@ -17,7 +17,6 @@ import { PartMedia } from "./PartMedia";
 import {
   oeStr,
   moneyCRC,
-  moneyUSD,
   DetailRow,
   SheetSection,
   VehicleListView,
@@ -212,7 +211,7 @@ export default function PartSearchDetailSheet({
 
   if (!open || (!part && !directOnly)) return null;
 
-  const costos = remusaDetail?.costos as Record<string, number> | undefined;
+  const precios = remusaDetail?.precios as { mayoreo?: number | null; detalle?: number | null } | undefined;
   const c1 = remusaDetail?.clasificacion_1 as { codigo?: string; descripcion?: string } | undefined;
   const c2 = remusaDetail?.clasificacion_2 as { codigo?: string; descripcion?: string } | undefined;
   const inv = (remusaDetail?.inventario as Array<Record<string, unknown>>) ?? [];
@@ -244,22 +243,25 @@ export default function PartSearchDetailSheet({
             label="Unidad almacén / venta"
             value={`${String(remusaDetail.unidad_almacen ?? "")} / ${String(remusaDetail.unidad_venta ?? "")}`}
           />
-          {costos ? (
+          {precios ? (
             <div className="mt-2 border-t border-neutral-200 pt-2">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#75141C]/90">
-                Costos y precios
+                Precios
               </p>
-              <DetailRow label="Costo último" value={`${moneyCRC(costos.ultimo_local ?? 0)} · ${moneyUSD(costos.ultimo_dolar ?? 0)}`} />
-              <DetailRow label="Costo promedio" value={`${moneyCRC(costos.promedio_local ?? 0)} · ${moneyUSD(costos.promedio_dolar ?? 0)}`} />
-              <DetailRow label="Precio base" value={`${moneyCRC(costos.precio_base_local ?? 0)} · ${moneyUSD(costos.precio_base_dolar ?? 0)}`} />
+              {precios.mayoreo != null ? (
+                <DetailRow label="Mayoreo" value={moneyCRC(precios.mayoreo)} />
+              ) : null}
+              {precios.detalle != null ? (
+                <DetailRow label="Detalle" value={moneyCRC(precios.detalle)} />
+              ) : null}
             </div>
           ) : null}
-          {inv.length > 0 ? (
-            <div className="mt-2 max-h-40 overflow-auto border-t border-neutral-200 pt-2">
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#75141C]/90">
-                Inventario por bodega
-              </p>
-              <ul className="space-y-1 text-[10px] text-neutral-800">
+          <div className="mt-2 border-t border-neutral-200 pt-2">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#75141C]/90">
+              Inventario por bodega
+            </p>
+            {inv.length > 0 ? (
+              <ul className="max-h-40 overflow-auto space-y-1 text-[10px] text-neutral-800">
                 {inv.map((row, i) => (
                   <li key={i} className="flex flex-wrap gap-x-2 border-b border-neutral-100/80 pb-1">
                     <span className="font-medium">{String(row.bodega)}</span>
@@ -268,8 +270,10 @@ export default function PartSearchDetailSheet({
                   </li>
                 ))}
               </ul>
-            </div>
-          ) : null}
+            ) : (
+              <p className="text-[10px] text-neutral-400">Sin stock en bodegas</p>
+            )}
+          </div>
         </>
       ) : (
         <p className="text-[11px] text-neutral-600">Sin detalle extendido.</p>
