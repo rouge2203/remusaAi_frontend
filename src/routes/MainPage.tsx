@@ -455,7 +455,7 @@ function MainPageContent() {
                         <div className="bg-black/25 px-5 pb-6 pt-4 transition-colors duration-200 hover:bg-black/30 lg:px-7 lg:pb-7">
                           <p className="mb-3 text-sm leading-relaxed text-white/90">
                             Escribe el VIN de 17 caracteres para obtener EPC,
-                            modelo, motor y datos de fabricacion (17VIN).
+                            modelo, motor y datos de fabricacion.
                           </p>
                           <SearchInput
                             placeholder="VIN (17 caracteres)"

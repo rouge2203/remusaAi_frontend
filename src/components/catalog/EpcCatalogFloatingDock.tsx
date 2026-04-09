@@ -22,8 +22,8 @@ export default function EpcCatalogFloatingDock({
       allItems={MENU_CATALOG_EPC}
       primaryItems={MENU_CATALOG_EPC_PRIMARY}
       moreItems={MENU_CATALOG_EPC_MORE}
-      headerTitle="> catalogo epc (17vin)"
-      fallbackMenuTitle="catalogo epc (17vin)"
+      headerTitle="> catalogo epc"
+      fallbackMenuTitle="catalogo epc"
       ariaLabel="Menú catálogo EPC"
     />
   );

@@ -10,7 +10,10 @@ import {
   PART_DETAIL_REMUSA_DETAIL_MESSAGES,
   type PartDetailLoadingKey,
 } from "../../constants/catalogLoadingMessages";
-import { PART_DETAIL_MENU_MATCH, PART_DETAIL_MENU_NOMATCH } from "../../constants/partDetailSheetMenu";
+import {
+  PART_DETAIL_MENU_MATCH,
+  PART_DETAIL_MENU_NOMATCH,
+} from "../../constants/partDetailSheetMenu";
 import type { MenuItem } from "../../constants/remusaMenu";
 import { MenuTerminalRow } from "../menu/MenuTerminalRow";
 import { PartMedia } from "./PartMedia";
@@ -39,7 +42,10 @@ export default function PartSearchDetailSheet({
   directOnly: boolean;
 }) {
   const [enrichedPart, setEnrichedPart] = useState<Record<string, unknown>>({});
-  const [remusaDetail, setRemusaDetail] = useState<Record<string, unknown> | null>(null);
+  const [remusaDetail, setRemusaDetail] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [remusaLoading, setRemusaLoading] = useState(false);
   const [actionKey, setActionKey] = useState<PartDetailLoadingKey | null>(null);
   const [actionPayload, setActionPayload] = useState<unknown>(null);
@@ -111,13 +117,20 @@ export default function PartSearchDetailSheet({
   }, [open, part, remusaHit?.articulo, loadRemusaDetail, directOnly]);
 
   const ep = enrichedPart;
-  const nameEn = part?.partNameEn || oeStr(ep, "name_en", "Name_en", "Part_name_en");
-  const nameZh = part?.partNameZh || oeStr(ep, "name_zh", "Name_zh", "Part_name_zh");
-  const brandEn = part?.brandNameEn || oeStr(ep, "Brand_name_en", "brand_name_en");
+  const nameEn =
+    part?.partNameEn || oeStr(ep, "name_en", "Name_en", "Part_name_en");
+  const nameZh =
+    part?.partNameZh || oeStr(ep, "name_zh", "Name_zh", "Part_name_zh");
+  const brandEn =
+    part?.brandNameEn || oeStr(ep, "Brand_name_en", "brand_name_en");
   const epc = part?.epc || oeStr(ep, "Epc", "epc");
   const groupId = part?.groupId || oeStr(ep, "Group_id", "group_id");
 
-  const runAction = async (key: PartDetailLoadingKey, id: string, fn: () => Promise<unknown>) => {
+  const runAction = async (
+    key: PartDetailLoadingKey,
+    id: string,
+    fn: () => Promise<unknown>,
+  ) => {
     setCollapseDetailSections(true);
     setActionKey(key);
     setLastActionId(id);
@@ -166,7 +179,9 @@ export default function PartSearchDetailSheet({
   const onMenuSelect = (item: MenuItem) => {
     if (!pn || actionKey != null) return;
     const fallback =
-      hasRemusaEffective && articuloResolved ? [pn, articuloResolved].filter(Boolean).join(",") : undefined;
+      hasRemusaEffective && articuloResolved
+        ? [pn, articuloResolved].filter(Boolean).join(",")
+        : undefined;
     if (item.id === "e") {
       void onEquivSearch();
       return;
@@ -177,15 +192,21 @@ export default function PartSearchDetailSheet({
     } else if (key === "1") {
       void runAction("1", "1", () => api.partsSearchExact(pn));
     } else if (key === "2") {
-      void runAction("2", "2", () => api.partsInterchange(pn).then((r) => r.data));
+      void runAction("2", "2", () =>
+        api.partsInterchange(pn).then((r) => r.data),
+      );
     } else if (key === "3") {
       void runAction("3", "3", () => api.partsVehicles(pn).then((r) => r.data));
     } else if (key === "4") {
-      void runAction("4", "4", () => api.partsVehiclesAftermarket(pn).then((r) => r.data));
+      void runAction("4", "4", () =>
+        api.partsVehiclesAftermarket(pn).then((r) => r.data),
+      );
     } else if (key === "5") {
       void runAction("5", "5", () => api.partsPrice(pn).then((r) => r.prices));
     } else if (key === "6") {
-      void runAction("6", "6", () => api.partsIllustration({ epc: epc || "unknown", part_number: pn }));
+      void runAction("6", "6", () =>
+        api.partsIllustration({ epc: epc || "unknown", part_number: pn }),
+      );
     }
   };
 
@@ -195,14 +216,17 @@ export default function PartSearchDetailSheet({
     const d = actionPayload as Record<string, unknown>;
     const list =
       (d.ModelListStd as Array<Record<string, unknown>>) ??
-      (d.ModelListStd_aftermarket_by_engine as Array<Record<string, unknown>>) ??
+      (d.ModelListStd_aftermarket_by_engine as Array<
+        Record<string, unknown>
+      >) ??
       null;
     if (!list || !Array.isArray(list) || list.length === 0) return null;
     return { vehicles: list, mode: lastActionId as "3" | "4" };
   }, [actionPayload, actionKey, lastActionId]);
 
   const tecdocData = useMemo(() => {
-    if (actionPayload == null || actionKey != null || lastActionId !== "t") return null;
+    if (actionPayload == null || actionKey != null || lastActionId !== "t")
+      return null;
     const d = actionPayload as Record<string, unknown>;
     const articles = d.articles as Array<Record<string, unknown>> | undefined;
     if (!articles || articles.length === 0) return null;
@@ -211,34 +235,73 @@ export default function PartSearchDetailSheet({
 
   if (!open || (!part && !directOnly)) return null;
 
-  const precios = remusaDetail?.precios as { mayoreo?: number | null; detalle?: number | null } | undefined;
-  const c1 = remusaDetail?.clasificacion_1 as { codigo?: string; descripcion?: string } | undefined;
-  const c2 = remusaDetail?.clasificacion_2 as { codigo?: string; descripcion?: string } | undefined;
-  const inv = (remusaDetail?.inventario as Array<Record<string, unknown>>) ?? [];
+  const precios = remusaDetail?.precios as
+    | { mayoreo?: number | null; detalle?: number | null }
+    | undefined;
+  const c1 = remusaDetail?.clasificacion_1 as
+    | { codigo?: string; descripcion?: string }
+    | undefined;
+  const c2 = remusaDetail?.clasificacion_2 as
+    | { codigo?: string; descripcion?: string }
+    | undefined;
+  const inv =
+    (remusaDetail?.inventario as Array<Record<string, unknown>>) ?? [];
 
-  const menuItems = hasRemusaEffective ? PART_DETAIL_MENU_MATCH : PART_DETAIL_MENU_NOMATCH;
-  const showRemusaColumn = (hasRemusa && remusaHit) || remusaLoading || remusaDetail;
+  const menuItems = hasRemusaEffective
+    ? PART_DETAIL_MENU_MATCH
+    : PART_DETAIL_MENU_NOMATCH;
+  const showRemusaColumn =
+    (hasRemusa && remusaHit) || remusaLoading || remusaDetail;
 
   const remusaBlock = (
     <SheetSection title="REMUSA" collapseSignal={collapseDetailSections}>
       {remusaLoading ? (
-        <TerminalLoader messages={[...PART_DETAIL_REMUSA_DETAIL_MESSAGES]} active variant="light" />
+        <TerminalLoader
+          messages={[...PART_DETAIL_REMUSA_DETAIL_MESSAGES]}
+          active
+          variant="light"
+        />
       ) : remusaDetail ? (
         <>
-          <DetailRow label="Código" value={String(remusaDetail.articulo ?? "")} highlight />
-          <DetailRow label="Descripción" value={String(remusaDetail.descripcion ?? "")} />
+          <DetailRow
+            label="Código"
+            value={String(remusaDetail.articulo ?? "")}
+            highlight
+          />
+          <DetailRow
+            label="Descripción"
+            value={String(remusaDetail.descripcion ?? "")}
+          />
           <DetailRow
             label="Activo"
-            value={remusaDetail.activo === true ? "Sí" : remusaDetail.activo === false ? "No" : ""}
+            value={
+              remusaDetail.activo === true
+                ? "Sí"
+                : remusaDetail.activo === false
+                  ? "No"
+                  : ""
+            }
           />
           {c1?.codigo ? (
-            <DetailRow label="Familia" value={`${c1.codigo} — ${c1.descripcion ?? ""}`.trim()} />
+            <DetailRow
+              label="Familia"
+              value={`${c1.codigo} — ${c1.descripcion ?? ""}`.trim()}
+            />
           ) : null}
           {c2?.codigo ? (
-            <DetailRow label="Sub-familia" value={`${c2.codigo} — ${c2.descripcion ?? ""}`.trim()} />
+            <DetailRow
+              label="Sub-familia"
+              value={`${c2.codigo} — ${c2.descripcion ?? ""}`.trim()}
+            />
           ) : null}
-          <DetailRow label="Proveedor" value={String(remusaDetail.proveedor ?? "")} />
-          <DetailRow label="Art. del proveedor" value={String(remusaDetail.articulo_del_proveedor ?? "")} />
+          <DetailRow
+            label="Proveedor"
+            value={String(remusaDetail.proveedor ?? "")}
+          />
+          <DetailRow
+            label="Art. del proveedor"
+            value={String(remusaDetail.articulo_del_proveedor ?? "")}
+          />
           <DetailRow
             label="Unidad almacén / venta"
             value={`${String(remusaDetail.unidad_almacen ?? "")} / ${String(remusaDetail.unidad_venta ?? "")}`}
@@ -263,15 +326,22 @@ export default function PartSearchDetailSheet({
             {inv.length > 0 ? (
               <ul className="max-h-40 overflow-auto space-y-1 text-[10px] text-neutral-800">
                 {inv.map((row, i) => (
-                  <li key={i} className="flex flex-wrap gap-x-2 border-b border-neutral-100/80 pb-1">
+                  <li
+                    key={i}
+                    className="flex flex-wrap gap-x-2 border-b border-neutral-100/80 pb-1"
+                  >
                     <span className="font-medium">{String(row.bodega)}</span>
-                    <span className="text-neutral-500">{String(row.nombre)}</span>
+                    <span className="text-neutral-500">
+                      {String(row.nombre)}
+                    </span>
                     <span>Disp: {String(row.disponible)}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-[10px] text-neutral-400">Sin stock en bodegas</p>
+              <p className="text-[10px] text-neutral-400">
+                Sin stock en bodegas
+              </p>
             )}
           </div>
         </>
@@ -282,14 +352,16 @@ export default function PartSearchDetailSheet({
   );
 
   const oeBlock = !directOnly ? (
-    <SheetSection title="Info OE (17VIN)" collapseSignal={collapseDetailSections}>
+    <SheetSection title="Info OE" collapseSignal={collapseDetailSections}>
       <DetailRow label="Número OE" value={pn} />
       <DetailRow label="Nombre (EN)" value={nameEn} />
       <DetailRow label="Nombre (ZH)" value={nameZh} />
       {brandEn ? <DetailRow label="Marcas" value={brandEn} /> : null}
       {epc ? <DetailRow label="EPC" value={epc} /> : null}
       {groupId ? <DetailRow label="Group ID" value={groupId} /> : null}
-      {hasRemusa && remusaHit ? <DetailRow label="Match via" value={remusaHit.source} highlight /> : null}
+      {hasRemusa && remusaHit ? (
+        <DetailRow label="Match via" value={remusaHit.source} highlight />
+      ) : null}
     </SheetSection>
   ) : null;
 
@@ -348,15 +420,21 @@ export default function PartSearchDetailSheet({
                     : "flex flex-col gap-3"
                 }
               >
-                {showRemusaColumn ? <div className="min-w-0 space-y-3">{remusaBlock}</div> : null}
+                {showRemusaColumn ? (
+                  <div className="min-w-0 space-y-3">{remusaBlock}</div>
+                ) : null}
                 {oeBlock ? (
                   <div className="min-w-0 space-y-3">{oeBlock}</div>
                 ) : null}
               </div>
 
-              {!directOnly && !showRemusaColumn && !hasRemusa && !remusaDetail ? (
+              {!directOnly &&
+              !showRemusaColumn &&
+              !hasRemusa &&
+              !remusaDetail ? (
                 <p className="rounded-xl border border-neutral-200/80 bg-white px-3 py-2 text-[11px] text-neutral-500 shadow-sm">
-                  No encontrada en REMUSA (directa). Use equivalencias en el menú de acciones.
+                  No encontrada en REMUSA (directa). Use equivalencias en el
+                  menú de acciones.
                 </p>
               ) : null}
 
@@ -384,8 +462,14 @@ export default function PartSearchDetailSheet({
                           onClick={() => onSelectEquiv(row)}
                           className="w-full rounded-xl border border-[#75141C]/25 bg-white px-3 py-2 text-left text-[11px] text-[#75141C] shadow-sm transition hover:border-[#75141C]/40 hover:bg-[#75141C]/5"
                         >
-                          <span className="font-semibold text-neutral-900">{eqPn}</span>
-                          {art ? <span className="mt-0.5 block text-neutral-600">→ {art}</span> : null}
+                          <span className="font-semibold text-neutral-900">
+                            {eqPn}
+                          </span>
+                          {art ? (
+                            <span className="mt-0.5 block text-neutral-600">
+                              → {art}
+                            </span>
+                          ) : null}
                         </button>
                       </li>
                     );
@@ -436,13 +520,20 @@ export default function PartSearchDetailSheet({
                   </p>
                   <div className="mt-2">
                     {vehicleListData ? (
-                      <VehicleListView vehicles={vehicleListData.vehicles} mode={vehicleListData.mode} />
+                      <VehicleListView
+                        vehicles={vehicleListData.vehicles}
+                        mode={vehicleListData.mode}
+                      />
                     ) : tecdocData ? (
                       <TecdocResultView data={tecdocData} />
                     ) : (
                       <>
-                        {typeof actionPayload === "object" && actionPayload !== null ? (
-                          <IllustrationMaybe epc={epc} payload={actionPayload as Record<string, unknown>} />
+                        {typeof actionPayload === "object" &&
+                        actionPayload !== null ? (
+                          <IllustrationMaybe
+                            epc={epc}
+                            payload={actionPayload as Record<string, unknown>}
+                          />
                         ) : null}
                         <div className="mt-2 overflow-hidden rounded-xl border border-neutral-200/80 bg-neutral-950 p-3">
                           <pre className="wrap-break-word max-h-[min(40vh,360px)] overflow-auto text-[10px] leading-relaxed text-emerald-100/95 whitespace-pre-wrap">
@@ -463,8 +554,20 @@ export default function PartSearchDetailSheet({
   );
 }
 
-function IllustrationMaybe({ epc, payload }: { epc: string; payload: Record<string, unknown> }) {
+function IllustrationMaybe({
+  epc,
+  payload,
+}: {
+  epc: string;
+  payload: Record<string, unknown>;
+}) {
   const url = api.illustrationImageUrl(epc, payload);
   if (!url) return null;
-  return <PartMedia src={url} alt="Ilustración" className="max-h-48 w-full object-contain" />;
+  return (
+    <PartMedia
+      src={url}
+      alt="Ilustración"
+      className="max-h-48 w-full object-contain"
+    />
+  );
 }
