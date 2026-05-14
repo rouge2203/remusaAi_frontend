@@ -30,8 +30,7 @@ export default defineConfig(({ mode }) => {
       host: true,
       proxy: {
         "/api": {
-          // target: "http://localhost:8000",
-          target: "http://45.55.51.15",
+          target: "http://localhost:9000",
           changeOrigin: true,
         },
         "/proxy17vin": {

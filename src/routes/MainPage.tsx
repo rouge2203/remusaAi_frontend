@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, useNavigate } from "react-router-dom";
 import {
   HiOutlineIdentification,
   HiOutlineWrenchScrewdriver,
@@ -8,12 +8,14 @@ import {
   HiChevronDown,
 } from "react-icons/hi2";
 import { PiBarcodeBold } from "react-icons/pi";
+import { RiRobot2Line } from "react-icons/ri";
 import { motion, AnimatePresence } from "framer-motion";
 import SearchInput from "../components/search/SearchInput";
 import TerminalLoader from "../components/search/TerminalLoader";
 import ResultsDisplay from "../components/results/ResultsDisplay";
 import PlateNotFoundToast from "../components/search/PlateNotFoundToast";
 import { useSearch } from "../hooks/useSearch";
+import { useAuth } from "../contexts/AuthContext";
 import type { LayoutOutletContext } from "../components/layout/Layout";
 import type { SearchMode } from "../types";
 import {
@@ -80,6 +82,13 @@ function scrollBlockIntoViewWithTopGap(el: HTMLElement, gapPx: number) {
 
 function MainPageContent() {
   const { openChat } = useOutletContext<LayoutOutletContext>();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
   const {
     setLeftPaneDockNode,
     registerScrollResultsPanelToTop,
@@ -208,13 +217,26 @@ function MainPageContent() {
             decoding="async"
           />
         </div>
-        <button
-          type="button"
-          className="shrink-0 justify-self-end rounded-lg p-2 text-neutral-400 transition-colors hover:bg-white/5 hover:text-neutral-200"
-          aria-label="Cerrar sesión"
-        >
-          <HiOutlineArrowRightOnRectangle className="text-xl" />
-        </button>
+        <div className="flex shrink-0 items-center gap-3 justify-self-end">
+          {user && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-neutral-500">{user.full_name}</span>
+              {user.is_superuser && (
+                <span className="rounded-full border border-[#75141C]/30 bg-[#75141C]/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-[#75141C]">
+                  admin
+                </span>
+              )}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="shrink-0 rounded-lg p-2 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+            aria-label="Cerrar sesión"
+          >
+            <HiOutlineArrowRightOnRectangle className="text-xl" />
+          </button>
+        </div>
       </header>
 
       <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col lg:flex-row">
@@ -236,23 +258,36 @@ function MainPageContent() {
                   <button
                     type="button"
                     onClick={openChat}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 text-[#75141C] transition-all duration-300 hover:scale-105 hover:border-[#75141C]/35 hover:bg-[#75141C]/10 active:scale-95"
-                    aria-label="Asistente"
+                    className="flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-neutral-200 px-3 text-[#75141C] transition-all duration-300 hover:scale-105 hover:border-[#75141C]/35 hover:bg-[#75141C]/10 active:scale-95"
+                    aria-label="Ai Remusa"
                   >
-                    <HiOutlineUserCircle className="text-2xl" />
+                    <RiRobot2Line className="text-xl" />
+                    <span className="text-sm font-semibold tracking-tight">
+                      Asistente Remusa
+                    </span>
                   </button>
-                  <div className="flex min-w-0 flex-1 justify-center px-1">
+                  <div className="flex min-w-0 flex-1 flex-col items-center px-1">
                     <img
                       src="/logo.webp"
                       alt="Remusa AI"
                       className="h-10 max-h-14 w-auto max-w-[min(220px,52vw)] object-contain object-center lg:h-16"
                       decoding="async"
                     />
+                    {user && (
+                      <div className="mt-0.5 flex items-center gap-1.5">
+                        <span className="text-[10px] text-neutral-400">{user.full_name}</span>
+                        {user.is_superuser && (
+                          <span className="rounded-full border border-[#75141C]/30 bg-[#75141C]/10 px-1.5 py-px font-mono text-[8px] uppercase tracking-wider text-[#75141C]">
+                            admin
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"
-                    disabled
-                    className="flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-full border border-neutral-200 text-neutral-400 opacity-50"
+                    onClick={handleLogout}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 text-neutral-400 transition-all duration-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 active:scale-95"
                     aria-label="Salir"
                   >
                     <HiOutlineArrowRightOnRectangle className="text-lg" />

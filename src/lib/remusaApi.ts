@@ -3,19 +3,41 @@
  * Secrets live on the server; browser only calls /api/*.
  */
 import type { PartResult, VehicleInfo, VinDecodeResult } from "../types";
+import { getAccessToken, refresh as refreshToken, setAccessToken } from "./authApi";
 
 const API_ROOT = `${import.meta.env.VITE_API_BASE ?? ""}`.replace(/\/$/, "") + "/api";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const url = path.startsWith("http") ? path : `${API_ROOT}${path.startsWith("/") ? path : `/${path}`}`;
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-  });
+
+  const doFetch = (token: string | null) =>
+    fetch(url, {
+      ...init,
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init?.headers,
+      },
+    });
+
+  const token = getAccessToken();
+  let res = await doFetch(token);
+
+  if (res.status === 401 && token) {
+    const refreshed = await refreshToken();
+    if (refreshed) {
+      res = await doFetch(refreshed.access);
+    } else {
+      // Token is invalid and refresh failed — retry without token
+      // so AllowAny endpoints still work, then signal logout.
+      res = await doFetch(null);
+      setAccessToken(null);
+      window.dispatchEvent(new CustomEvent("auth:logout"));
+    }
+  }
+
   const text = await res.text();
   let data: unknown = null;
   try {

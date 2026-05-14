@@ -111,7 +111,26 @@ export interface SearchState {
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'tool';
   content: string;
   timestamp: Date;
+  toolCalls?: { name: string; input: Record<string, unknown> }[];
+}
+
+export interface AuthUser {
+  id: number;
+  username: string;
+  full_name: string;
+  email: string;
+  is_staff: boolean;
+  is_superuser: boolean;
+  tipo_cliente: string | null;
+  perfil: Record<string, unknown> | null;
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  updated_at: string;
+  is_locked: boolean;
 }
