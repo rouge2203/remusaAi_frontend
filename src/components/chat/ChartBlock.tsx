@@ -170,7 +170,7 @@ function BarBody({ spec, colors }: ChartBodyProps) {
               : undefined
           }
         />
-        <Tooltip formatter={(v: number) => [v.toLocaleString("es-CR"), ""]} labelStyle={{ fontSize: 11 }} contentStyle={{ fontSize: 11 }} />
+        <Tooltip formatter={(v) => [Number(v).toLocaleString("es-CR"), ""]} labelStyle={{ fontSize: 11 }} contentStyle={{ fontSize: 11 }} />
         <Bar dataKey="value" radius={[3, 3, 0, 0]}>
           {spec.data.map((_, i) => (
             <Cell key={i} fill={colors[i % colors.length]} />
@@ -205,7 +205,7 @@ function LineBody({ spec, colors }: ChartBodyProps) {
               : undefined
           }
         />
-        <Tooltip formatter={(v: number) => [v.toLocaleString("es-CR"), ""]} contentStyle={{ fontSize: 11 }} />
+        <Tooltip formatter={(v) => [Number(v).toLocaleString("es-CR"), ""]} contentStyle={{ fontSize: 11 }} />
         <Line
           type="monotone"
           dataKey="value"
@@ -249,7 +249,7 @@ function AreaBody({ spec, colors }: ChartBodyProps) {
               : undefined
           }
         />
-        <Tooltip formatter={(v: number) => [v.toLocaleString("es-CR"), ""]} contentStyle={{ fontSize: 11 }} />
+        <Tooltip formatter={(v) => [Number(v).toLocaleString("es-CR"), ""]} contentStyle={{ fontSize: 11 }} />
         <Area
           type="monotone"
           dataKey="value"
@@ -275,16 +275,17 @@ function PieBody({ spec, colors, donut }: ChartBodyProps & { donut?: boolean }) 
           outerRadius={85}
           innerRadius={donut ? 42 : 0}
           paddingAngle={2}
-          label={({ name, percent }) =>
-            percent > 0.04 ? `${name} ${(percent * 100).toFixed(0)}%` : ""
-          }
+          label={({ name, percent }) => {
+            const p = percent ?? 0;
+            return p > 0.04 ? `${name} ${(p * 100).toFixed(0)}%` : "";
+          }}
           labelLine={false}
         >
           {spec.data.map((_, i) => (
             <Cell key={i} fill={colors[i % colors.length]} />
           ))}
         </Pie>
-        <Tooltip formatter={(v: number) => [v.toLocaleString("es-CR"), ""]} contentStyle={{ fontSize: 11 }} />
+        <Tooltip formatter={(v) => [Number(v).toLocaleString("es-CR"), ""]} contentStyle={{ fontSize: 11 }} />
         <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
       </PieChart>
     </ResponsiveContainer>

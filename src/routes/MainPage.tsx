@@ -4,7 +4,6 @@ import {
   HiOutlineIdentification,
   HiOutlineWrenchScrewdriver,
   HiOutlineArrowRightOnRectangle,
-  HiOutlineUserCircle,
   HiChevronDown,
 } from "react-icons/hi2";
 import { PiBarcodeBold } from "react-icons/pi";

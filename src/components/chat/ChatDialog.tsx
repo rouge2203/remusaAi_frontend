@@ -67,7 +67,6 @@ export default function ChatDialog({ open, onClose }: ChatDialogProps) {
     messages,
     status,
     send,
-    sendVoice,
     startNew,
     conversationId,
     conversations,
