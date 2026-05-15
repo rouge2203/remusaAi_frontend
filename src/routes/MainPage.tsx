@@ -204,10 +204,13 @@ function MainPageContent() {
         <button
           type="button"
           onClick={openChat}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/20 text-[#75141C] transition-all duration-300 hover:border-[#75141C]/50 hover:bg-[#75141C]/15"
-          aria-label="Asistente"
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-neutral-200 px-3 text-[#75141C] transition-all duration-300 hover:scale-105 hover:border-[#75141C]/35 hover:bg-[#75141C]/10 active:scale-95"
+          aria-label="Asistente Remusa"
         >
-          <HiOutlineUserCircle className="text-2xl" />
+          <RiRobot2Line className="text-xl" />
+          <span className="text-sm font-semibold tracking-tight">
+            Asistente Remusa
+          </span>
         </button>
         <div className="flex min-w-0 justify-center px-2">
           <img
@@ -254,7 +257,7 @@ function MainPageContent() {
               }}
             >
               <section className="rounded-b-[36px] bg-white px-4 pb-6 pt-3 shadow-[0_24px_60px_-40px_rgba(0,0,0,0.35)] sm:rounded-b-[40px] lg:mb-6 lg:rounded-none lg:bg-transparent lg:px-8 lg:pb-0 lg:pt-4 lg:shadow-none">
-                <div className="flex items-center justify-between lg:hidden">
+                <div className="relative flex items-center justify-between lg:hidden">
                   <button
                     type="button"
                     onClick={openChat}
@@ -263,10 +266,10 @@ function MainPageContent() {
                   >
                     <RiRobot2Line className="text-xl" />
                     <span className="text-sm font-semibold tracking-tight">
-                      Asistente Remusa
+                      Chat
                     </span>
                   </button>
-                  <div className="flex min-w-0 flex-1 flex-col items-center px-1">
+                  <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
                     <img
                       src="/logo.webp"
                       alt="Remusa AI"
@@ -275,7 +278,9 @@ function MainPageContent() {
                     />
                     {user && (
                       <div className="mt-0.5 flex items-center gap-1.5">
-                        <span className="text-[10px] text-neutral-400">{user.full_name}</span>
+                        <span className="text-[10px] text-neutral-400">
+                          {user.full_name}
+                        </span>
                         {user.is_superuser && (
                           <span className="rounded-full border border-[#75141C]/30 bg-[#75141C]/10 px-1.5 py-px font-mono text-[8px] uppercase tracking-wider text-[#75141C]">
                             admin

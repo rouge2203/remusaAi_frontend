@@ -115,6 +115,65 @@ export function useChat() {
     }
   }, [conversationId, conversationTitle, refreshConversations]);
 
+  const sendVoice = useCallback(async (audioBlob: Blob) => {
+    let cid = conversationId;
+    let createdNew = false;
+
+    if (!cid) {
+      try {
+        const created = await chatApi.createConversation();
+        cid = created.id;
+        createdNew = true;
+        setConversationId(cid);
+        setConversationTitle(created.title);
+      } catch {
+        setStatus("error");
+        return;
+      }
+    }
+
+    setStatus("sending");
+
+    try {
+      const resp = await chatApi.sendVoiceMessage(cid, audioBlob);
+
+      const userMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: resp.transcribed_text,
+        timestamp: new Date(),
+      };
+      const assistantMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: resp.assistant_text,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, userMsg, assistantMsg]);
+      setConversationTitle(resp.conversation_title);
+      setStatus(resp.is_locked ? "locked" : "idle");
+      if (createdNew || resp.conversation_title !== conversationTitle) {
+        refreshConversations();
+      }
+    } catch (err: unknown) {
+      const errorData = (err as { status?: number; data?: { error?: string } });
+      if (errorData.status === 409 && errorData.data?.error === "limit_reached") {
+        setStatus("locked");
+        refreshConversations();
+      } else {
+        setStatus("error");
+        const errText = errorData.data?.error ?? "Error interno. Por favor intenta de nuevo.";
+        const errorMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: errText,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+      }
+    }
+  }, [conversationId, conversationTitle, refreshConversations]);
+
   const startNew = useCallback(() => {
     setConversationId(null);
     setConversationTitle("Nueva conversación");
@@ -140,6 +199,7 @@ export function useChat() {
     messages,
     status,
     send,
+    sendVoice,
     startNew,
     conversations,
     loadingHistory,
