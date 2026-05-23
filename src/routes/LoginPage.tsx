@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { HiOutlineEye, HiOutlineEyeSlash } from "react-icons/hi2";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginPage() {
@@ -9,6 +10,7 @@ export default function LoginPage() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -87,15 +89,31 @@ export default function LoginPage() {
             <label htmlFor="password" className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-neutral-500">
               Contraseña
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#75141C] focus:outline-none focus:ring-2 focus:ring-[#75141C]/15"
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                className="w-full rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 pr-12 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#75141C] focus:outline-none focus:ring-2 focus:ring-[#75141C]/15"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                className="absolute inset-y-0 right-2 flex w-9 items-center justify-center rounded-xl text-neutral-400 transition hover:text-[#75141C] focus:text-[#75141C] focus:outline-none"
+                tabIndex={-1}
+              >
+                {showPassword ? (
+                  <HiOutlineEyeSlash className="text-lg" />
+                ) : (
+                  <HiOutlineEye className="text-lg" />
+                )}
+              </button>
+            </div>
           </div>
 
           <button

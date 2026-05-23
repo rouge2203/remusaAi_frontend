@@ -109,10 +109,36 @@ export interface SearchState {
   partDirectRemusa: RemusaHit | null;
 }
 
+/**
+ * One renderable piece of a streamed assistant message. Text parts hold a
+ * mutable string that grows as `text` SSE deltas arrive; block parts hold a
+ * parsed JSON payload sent over the SSE side-channel right after the matching
+ * tool returns, so the frontend renders the styled card directly instead of
+ * waiting for the model to regenerate the data as text.
+ */
+export type AssistantPart =
+  | { kind: 'text'; text: string }
+  | {
+      kind:
+        | 'remusa-parts'
+        | 'remusa-part-detail'
+        | 'remusa-doc-list'
+        | 'remusa-doc-detail'
+        | 'remusa-chart'
+        | 'remusa-vehicle';
+      name: string;
+      data: unknown;
+    };
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'tool';
+  /** Final / non-streamed text (voice endpoint, loaded history). */
   content: string;
+  /** Set on streamed assistant messages; renderer iterates these in order. */
+  parts?: AssistantPart[];
+  /** True while the assistant message is still receiving deltas. */
+  streaming?: boolean;
   timestamp: Date;
   toolCalls?: { name: string; input: Record<string, unknown> }[];
 }

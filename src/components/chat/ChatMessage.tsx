@@ -1,15 +1,15 @@
 import { motion } from "framer-motion";
-import { HiOutlineUser, HiArrowTopRightOnSquare } from "react-icons/hi2";
-import { RiRobot2Line } from "react-icons/ri";
+import { HiArrowTopRightOnSquare } from "react-icons/hi2";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useNavigate } from "react-router-dom";
-import type { ChatMessage as ChatMessageType } from "../../types";
+import type { ChatMessage as ChatMessageType, AssistantPart } from "../../types";
 import type { Components } from "react-markdown";
 import PartDetailCard, { parsePartDetail } from "./PartDetailCard";
 import DocList from "./DocList";
 import DocDetailCard, { parseDocDetail } from "./DocDetailCard";
 import ChartBlock, { type ChartSpec } from "./ChartBlock";
+import VehicleCard, { parseVehicle } from "./VehicleCard";
 
 interface AdminUserLinkData {
   username: string;
@@ -52,35 +52,19 @@ function parsePartsLine(line: string): { code: string; description: string } | n
   return { code: codePart, description: descPart || "" };
 }
 
-function RemusaPartsList({
-  source,
+function PartsButtons({
+  items,
   onPartClick,
 }: {
-  source: string;
+  items: { code: string; description: string }[];
   onPartClick?: (code: string) => void;
 }) {
-  const lines = source.split(/\r?\n/);
-  const parsed = lines.map(parsePartsLine).filter((p): p is NonNullable<typeof p> => p !== null);
-
-  if (parsed.length === 0) {
-    return (
-      <pre className="my-2 overflow-x-auto rounded-md bg-neutral-100 p-2 text-[12px] text-neutral-800">
-        <code>{source}</code>
-      </pre>
-    );
+  if (items.length === 0 || !onPartClick) {
+    return null;
   }
-
-  if (!onPartClick) {
-    return (
-      <pre className="my-2 overflow-x-auto rounded-md bg-neutral-100 p-2 text-[12px] text-neutral-800">
-        <code>{source}</code>
-      </pre>
-    );
-  }
-
   return (
     <div className="my-2 flex flex-col gap-2">
-      {parsed.map(({ code, description }, i) => (
+      {items.map(({ code, description }, i) => (
         <button
           key={`${code}-${i}`}
           type="button"
@@ -95,9 +79,115 @@ function RemusaPartsList({
   );
 }
 
+function RemusaPartsList({
+  source,
+  onPartClick,
+}: {
+  source: string;
+  onPartClick?: (code: string) => void;
+}) {
+  const lines = source.split(/\r?\n/);
+  const parsed = lines.map(parsePartsLine).filter((p): p is NonNullable<typeof p> => p !== null);
+
+  if (parsed.length === 0 || !onPartClick) {
+    return (
+      <pre className="my-2 overflow-x-auto rounded-md bg-neutral-100 p-2 text-[12px] text-neutral-800">
+        <code>{source}</code>
+      </pre>
+    );
+  }
+  return <PartsButtons items={parsed} onPartClick={onPartClick} />;
+}
+
+/**
+ * Render a streamed remusa-parts block from the side-channel SSE event.
+ * Data shape matches the `find_inventory_for_vehicle` tool result:
+ * `{matches: [{oe_number, articulo?, desc?, ...}], matched, total_oe, ...}`.
+ */
+function RemusaPartsFromData({
+  data,
+  onPartClick,
+}: {
+  data: unknown;
+  onPartClick?: (code: string) => void;
+}) {
+  if (!data || typeof data !== "object") return null;
+  const matches = (data as { matches?: unknown[] }).matches;
+  if (!Array.isArray(matches) || matches.length === 0) return null;
+  const items = matches
+    .map((m) => {
+      if (!m || typeof m !== "object") return null;
+      const obj = m as Record<string, unknown>;
+      // Backend shapes the payload as `{code, description, ...}`; fall back to
+      // raw Softland field names for safety.
+      const code =
+        (obj.code as string | undefined) ??
+        (obj.articulo as string | undefined) ??
+        (obj.oe_number as string | undefined);
+      const desc =
+        (obj.description as string | undefined) ??
+        (obj.desc as string | undefined) ??
+        (obj.descripcion as string | undefined) ??
+        "";
+      if (!code || typeof code !== "string") return null;
+      return { code, description: typeof desc === "string" ? desc : "" };
+    })
+    .filter((p): p is { code: string; description: string } => p !== null);
+  return <PartsButtons items={items} onPartClick={onPartClick} />;
+}
+
+/** Render a non-text streamed assistant part using the existing styled components. */
+function renderBlockPart(
+  part: Extract<AssistantPart, { kind: Exclude<AssistantPart["kind"], "text"> }>,
+  opts: {
+    onPartClick?: (code: string) => void;
+    onAskCompatible?: (code: string) => void;
+    onDocClick?: (id: string, tipo: string) => void;
+  },
+) {
+  switch (part.kind) {
+    case "remusa-parts":
+      return <RemusaPartsFromData data={part.data} onPartClick={opts.onPartClick} />;
+    case "remusa-part-detail": {
+      const detail = parsePartDetail(part.data);
+      if (!detail) return null;
+      return <PartDetailCard data={detail} onAskCompatibleVehicles={opts.onAskCompatible} />;
+    }
+    case "remusa-doc-list": {
+      // The doc-list parser expects the legacy line-format string; if a future
+      // tool ships structured data here, swap to a data-aware component.
+      if (typeof part.data === "string") {
+        return <DocList source={part.data} onDocClick={opts.onDocClick} />;
+      }
+      return null;
+    }
+    case "remusa-doc-detail": {
+      const docDetail = parseDocDetail(part.data);
+      if (!docDetail) return null;
+      return <DocDetailCard data={docDetail} onPartClick={opts.onPartClick} />;
+    }
+    case "remusa-chart": {
+      return <ChartBlock spec={part.data as ChartSpec} />;
+    }
+    case "remusa-vehicle": {
+      const vehicle = parseVehicle(part.data);
+      if (!vehicle) return null;
+      return <VehicleCard data={vehicle} />;
+    }
+    default:
+      return null;
+  }
+}
+
 export default function ChatMessage({ message, index, onPartClick, onAskCompatible, onDocClick, isSuperUser }: ChatMessageProps) {
   const isUser = message.role === "user";
   const navigate = useNavigate();
+
+  // When the assistant message was streamed (parts[] present), the styled
+  // cards for remusa-parts / remusa-part-detail were already rendered as
+  // side-channel block parts. Hide any matching fence in the prose so we
+  // never show raw JSON if the model accidentally emits one.
+  const hideRemusaCardFences = Array.isArray(message.parts);
 
   const components: Partial<Components> = {
     p: ({ children }) => (
@@ -195,6 +285,7 @@ export default function ChatMessage({ message, index, onPartClick, onAskCompatib
       }
 
       if (isRemusaDetail) {
+        if (hideRemusaCardFences) return null;
         const rawDetail = Array.isArray(children)
           ? children.map((c) => (typeof c === "string" ? c : String(c))).join("")
           : String(children ?? "").replace(/\n$/, "");
@@ -219,6 +310,7 @@ export default function ChatMessage({ message, index, onPartClick, onAskCompatib
         );
       }
       if (isRemusaParts) {
+        if (hideRemusaCardFences) return null;
         const rawChildren = Array.isArray(children)
           ? children.map((c) => (typeof c === "string" ? c : String(c))).join("")
           : String(children ?? "").replace(/\n$/, "");
@@ -255,33 +347,81 @@ export default function ChatMessage({ message, index, onPartClick, onAskCompatib
     ),
   };
 
+  // Every assistant message — streamed cards, plain prose, or a "Pensando…"
+  // placeholder — lives inside the SAME bubble shape. Streamed cards get
+  // 90% width so PartDetailCard / VehicleCard / parts buttons have room.
+  // The "Pensando…" placeholder (streaming + no parts yet) collapses to its
+  // content width so it doesn't pre-allocate empty real estate.
+  const hasParts = Array.isArray(message.parts);
+  const isAssistant = message.role === "assistant";
+  const hasRenderedParts = hasParts && (message.parts?.length ?? 0) > 0;
+  const isThinkingPlaceholder =
+    isAssistant && hasParts && !!message.streaming && !hasRenderedParts;
+  const bubbleMaxWidth = isUser
+    ? "max-w-[85%]"
+    : isThinkingPlaceholder
+      ? "max-w-fit"
+      : isAssistant && hasParts
+        ? "max-w-[90%] w-[90%]"
+        : "max-w-[90%]";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut", delay: index * 0.04 }}
-      className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}
+      className={`flex ${isUser ? "justify-end" : "justify-start"}`}
     >
       <div
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-          isUser ? "bg-[#75141C]/12 text-[#75141C]" : "bg-neutral-100 text-neutral-700"
-        }`}
-      >
-        {isUser ? <HiOutlineUser className="text-base" /> : <RiRobot2Line className="text-base" />}
-      </div>
-
-      <div
-        className={`max-w-[85%] rounded-2xl border px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
+        className={`${bubbleMaxWidth} min-w-0 rounded-2xl border px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
           isUser
             ? "border-[#75141C]/25 bg-white text-neutral-900 rounded-tr-md"
             : "border-neutral-200/90 bg-white text-neutral-800 rounded-tl-md"
         }`}
       >
-        {message.role === "assistant" ? (
+        {isAssistant ? (
           <div className="font-mono text-[13px] leading-relaxed text-neutral-700">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-              {message.content}
-            </ReactMarkdown>
+            {hasParts ? (
+              <>
+                {(message.parts ?? []).map((part, i) =>
+                  part.kind === "text" ? (
+                    <ReactMarkdown
+                      key={`text-${i}`}
+                      remarkPlugins={[remarkGfm]}
+                      components={components}
+                    >
+                      {part.text}
+                    </ReactMarkdown>
+                  ) : (
+                    <div key={`block-${i}`} className="my-2 w-full min-w-0">
+                      {renderBlockPart(part, {
+                        onPartClick,
+                        onAskCompatible,
+                        onDocClick,
+                      })}
+                    </div>
+                  ),
+                )}
+                {message.streaming && (message.parts?.length ?? 0) === 0 ? (
+                  <span className="text-neutral-400 italic">
+                    Pensando…{" "}
+                    <span
+                      aria-hidden="true"
+                      className="ml-0.5 inline-block h-3 w-1.5 animate-pulse bg-neutral-400 align-baseline"
+                    />
+                  </span>
+                ) : message.streaming ? (
+                  <span
+                    aria-hidden="true"
+                    className="ml-0.5 inline-block h-3 w-1.5 animate-pulse bg-neutral-500 align-baseline"
+                  />
+                ) : null}
+              </>
+            ) : (
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+                {message.content}
+              </ReactMarkdown>
+            )}
           </div>
         ) : (
           <span className="whitespace-pre-wrap">{message.content}</span>

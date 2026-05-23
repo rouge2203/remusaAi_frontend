@@ -8,6 +8,7 @@ import {
   HiOutlineLockClosed,
   HiOutlineLightBulb,
   HiOutlineSparkles,
+  HiOutlineUserGroup,
 } from "react-icons/hi2";
 import { RiRobot2Line } from "react-icons/ri";
 import ChatMessage from "./ChatMessage";
@@ -15,6 +16,12 @@ import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
 import { useChat } from "../../hooks/useChat";
 import { useAuth } from "../../contexts/AuthContext";
+import {
+  listAdminChats,
+  listAdminUsersWithChats,
+  type AdminConversation,
+  type AdminUserWithChats,
+} from "../../lib/chatApi";
 
 const SUGGESTIONS = [
   { label: "Consulta por placa", text: "¿Qué repuestos tenemos para la placa " },
@@ -66,7 +73,9 @@ export default function ChatDialog({ open, onClose }: ChatDialogProps) {
   const {
     messages,
     status,
+    viewingAsAdmin,
     send,
+    stop,
     startNew,
     conversationId,
     conversations,
@@ -83,6 +92,70 @@ export default function ChatDialog({ open, onClose }: ChatDialogProps) {
   const [inputDraft, setInputDraft] = useState("");
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [adminSuggestionsOpen, setAdminSuggestionsOpen] = useState(false);
+  // Drawer view toggle. "mine" = the signed-in user's own conversations,
+  // "admin" = all users (super-user only).
+  const [historyView, setHistoryView] = useState<"mine" | "admin">("mine");
+  const [adminUsers, setAdminUsers] = useState<AdminUserWithChats[]>([]);
+  const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
+  // Drill-down: when set, the drawer shows that user's conversations.
+  const [adminUserId, setAdminUserId] = useState<number | null>(null);
+  const [adminConvs, setAdminConvs] = useState<AdminConversation[]>([]);
+  const [loadingAdminConvs, setLoadingAdminConvs] = useState(false);
+
+  // Load the users-with-chats list whenever the admin tab is shown without
+  // a drilled-down user. Refresh on every entry so the counts stay fresh.
+  useEffect(() => {
+    if (!historyOpen) return;
+    if (historyView !== "admin") return;
+    if (!isSuperUser) return;
+    if (adminUserId !== null) return;
+    let cancelled = false;
+    setLoadingAdminUsers(true);
+    (async () => {
+      try {
+        const res = await listAdminUsersWithChats();
+        if (!cancelled) setAdminUsers(res.results);
+      } catch {
+        if (!cancelled) setAdminUsers([]);
+      } finally {
+        if (!cancelled) setLoadingAdminUsers(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [historyOpen, historyView, isSuperUser, adminUserId]);
+
+  // When a specific admin user is drilled into, load their conversations.
+  useEffect(() => {
+    if (!historyOpen) return;
+    if (historyView !== "admin") return;
+    if (!isSuperUser) return;
+    if (adminUserId === null) return;
+    let cancelled = false;
+    setLoadingAdminConvs(true);
+    (async () => {
+      try {
+        const res = await listAdminChats({ user_id: adminUserId, page_size: 50 });
+        if (!cancelled) setAdminConvs(res.results);
+      } catch {
+        if (!cancelled) setAdminConvs([]);
+      } finally {
+        if (!cancelled) setLoadingAdminConvs(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [historyOpen, historyView, isSuperUser, adminUserId]);
+
+  // Switching the top tab clears any drill-down so re-entering Admin starts
+  // at the users list.
+  useEffect(() => {
+    if (historyView !== "admin") {
+      setAdminUserId(null);
+    }
+  }, [historyView]);
 
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -161,7 +234,13 @@ export default function ChatDialog({ open, onClose }: ChatDialogProps) {
 
   const handleSelect = (id: string) => {
     loadConversation(id);
-    setHistoryOpen(false);
+    setInputDraft("");
+    // Drawer intentionally stays open so the user can quickly switch to
+    // another conversation without re-opening Historial each time.
+  };
+
+  const handleSelectAdmin = (id: string) => {
+    loadConversation(id, { admin: true });
     setInputDraft("");
   };
 
@@ -356,11 +435,31 @@ export default function ChatDialog({ open, onClose }: ChatDialogProps) {
                       />
                     ))}
 
-                    {status === "sending" && <TypingIndicator />}
+                    {status === "sending" && !messages.some((m) => m.streaming) && (
+                      <TypingIndicator />
+                    )}
                   </div>
                 </div>
 
-                {status === "locked" ? (
+                {viewingAsAdmin ? (
+                  <div className="shrink-0 border-t border-neutral-200/90 bg-amber-50/60 px-4 py-3 sm:px-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[12px] text-amber-800">
+                        <span className="rounded-full bg-amber-200/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
+                          Vista admin
+                        </span>{" "}
+                        Solo lectura — no puedes enviar mensajes en la conversación de otro usuario.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleNew}
+                        className="shrink-0 rounded-xl border border-amber-300 bg-white px-3 py-1.5 text-[12px] font-medium text-amber-900 transition hover:bg-amber-100"
+                      >
+                        Volver a mi chat
+                      </button>
+                    </div>
+                  </div>
+                ) : status === "locked" ? (
                   <div className="shrink-0 border-t border-neutral-200/90 bg-white px-4 py-4 sm:px-5">
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center">
                       <p className="text-sm text-amber-800">
@@ -460,6 +559,8 @@ export default function ChatDialog({ open, onClose }: ChatDialogProps) {
                       value={inputDraft}
                       onValueChange={setInputDraft}
                       onSend={handleSend}
+                      onStop={stop}
+                      streaming={status === "sending"}
                       disabled={status === "sending"}
                       suggestionsOpen={suggestionsOpen}
                       onToggleSuggestions={() => setSuggestionsOpen((v) => !v)}
@@ -514,8 +615,155 @@ export default function ChatDialog({ open, onClose }: ChatDialogProps) {
                           </div>
                         </div>
 
+                        {isSuperUser && (
+                          <div className="shrink-0 border-b border-neutral-200/80 bg-neutral-50/60 px-2 py-2">
+                            <div className="flex items-center gap-1 rounded-xl bg-neutral-100 p-1">
+                              <button
+                                type="button"
+                                onClick={() => setHistoryView("mine")}
+                                className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold tracking-wide transition ${
+                                  historyView === "mine"
+                                    ? "bg-white text-[#75141C] shadow-sm"
+                                    : "text-neutral-500 hover:text-neutral-800"
+                                }`}
+                              >
+                                Mías
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setHistoryView("admin")}
+                                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold tracking-wide transition ${
+                                  historyView === "admin"
+                                    ? "bg-white text-[#4A9ED1] shadow-sm"
+                                    : "text-neutral-500 hover:text-neutral-800"
+                                }`}
+                              >
+                                <HiOutlineUserGroup className="text-xs" />
+                                Admin · Todas
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-                          {loadingHistory && conversations.length === 0 ? (
+                          {isSuperUser && historyView === "admin" ? (
+                            adminUserId === null ? (
+                              // ── Users-first list ──────────────────────
+                              loadingAdminUsers && adminUsers.length === 0 ? (
+                                <p className="px-3 py-6 text-center font-mono text-[12px] text-neutral-400">
+                                  {"> cargando..."}
+                                </p>
+                              ) : adminUsers.length === 0 ? (
+                                <p className="px-3 py-6 text-center font-mono text-[12px] text-neutral-400">
+                                  {"> sin usuarios con chats"}
+                                </p>
+                              ) : (
+                                <ul className="flex flex-col gap-1">
+                                  {adminUsers.map((u) => {
+                                    const initials = (u.full_name || u.username || "?")
+                                      .trim()
+                                      .split(/\s+/)
+                                      .slice(0, 2)
+                                      .map((p) => p[0]?.toUpperCase() ?? "")
+                                      .join("");
+                                    return (
+                                      <li key={u.id}>
+                                        <button
+                                          type="button"
+                                          onClick={() => setAdminUserId(u.id)}
+                                          className="group flex w-full min-w-0 items-center gap-2.5 rounded-xl border border-transparent px-2.5 py-2 text-left transition hover:border-neutral-200 hover:bg-neutral-50"
+                                        >
+                                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4A9ED1]/10 text-[11px] font-bold text-[#4A9ED1]">
+                                            {initials || "?"}
+                                          </div>
+                                          <div className="min-w-0 flex-1">
+                                            <p className="truncate text-[13px] font-medium text-neutral-800">
+                                              {u.full_name || u.username}
+                                            </p>
+                                            <p className="truncate font-mono text-[10px] text-neutral-500">
+                                              {u.username}
+                                              {u.tipo_cliente ? ` · ${u.tipo_cliente}` : ""}
+                                            </p>
+                                          </div>
+                                          <div className="shrink-0 text-right">
+                                            <p className="text-[11px] font-semibold text-neutral-700">
+                                              {u.chat_count}{" "}
+                                              <span className="text-[10px] font-normal text-neutral-400">
+                                                {u.chat_count === 1 ? "chat" : "chats"}
+                                              </span>
+                                            </p>
+                                            <p className="font-mono text-[10px] text-neutral-400">
+                                              {formatRelative(u.last_at)}
+                                            </p>
+                                          </div>
+                                        </button>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              )
+                            ) : (
+                              // ── Drill-down: one user's conversations ─
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setAdminUserId(null)}
+                                  className="mb-2 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-[11px] font-semibold text-[#4A9ED1] transition hover:bg-[#4A9ED1]/8"
+                                >
+                                  ← Volver a usuarios
+                                </button>
+                                {loadingAdminConvs && adminConvs.length === 0 ? (
+                                  <p className="px-3 py-6 text-center font-mono text-[12px] text-neutral-400">
+                                    {"> cargando..."}
+                                  </p>
+                                ) : adminConvs.length === 0 ? (
+                                  <p className="px-3 py-6 text-center font-mono text-[12px] text-neutral-400">
+                                    {"> este usuario no tiene chats"}
+                                  </p>
+                                ) : (
+                                  <ul className="flex flex-col gap-1">
+                                    {adminConvs.map((c) => {
+                                      const active = c.id === conversationId;
+                                      return (
+                                        <li key={c.id}>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSelectAdmin(c.id)}
+                                            className={`group flex w-full min-w-0 items-start gap-2 rounded-xl border px-2.5 py-2 text-left transition ${
+                                              active
+                                                ? "border-[#4A9ED1]/30 bg-[#4A9ED1]/5"
+                                                : "border-transparent hover:border-neutral-200 hover:bg-neutral-50"
+                                            }`}
+                                          >
+                                            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#4A9ED1]/10 text-[#4A9ED1]">
+                                              {c.is_locked ? (
+                                                <HiOutlineLockClosed className="text-sm" />
+                                              ) : (
+                                                <RiRobot2Line className="text-sm" />
+                                              )}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                              <p
+                                                className={`truncate text-[13px] font-medium ${
+                                                  active ? "text-[#4A9ED1]" : "text-neutral-800"
+                                                }`}
+                                              >
+                                                {c.title || "Sin título"}
+                                              </p>
+                                              <p className="font-mono text-[10px] text-neutral-400">
+                                                {formatRelative(c.updated_at)}
+                                                {c.is_locked && " · cerrada"}
+                                              </p>
+                                            </div>
+                                          </button>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                )}
+                              </>
+                            )
+                          ) : loadingHistory && conversations.length === 0 ? (
                             <p className="px-3 py-6 text-center font-mono text-[12px] text-neutral-400">
                               {"> cargando..."}
                             </p>

@@ -1,18 +1,22 @@
 import { forwardRef, useCallback } from "react";
-import { HiOutlinePaperAirplane, HiOutlineLightBulb } from "react-icons/hi2";
+import { HiOutlinePaperAirplane, HiOutlineLightBulb, HiOutlineStop } from "react-icons/hi2";
 import MicButton from "./MicButton";
 
 interface ChatInputProps {
   value: string;
   onValueChange: (value: string) => void;
   onSend: (message: string) => void;
+  /** When provided AND `streaming` is true, the send button morphs into a stop button. */
+  onStop?: () => void;
+  /** True while a stream is in flight — drives the morph to the stop button. */
+  streaming?: boolean;
   disabled?: boolean;
   suggestionsOpen?: boolean;
   onToggleSuggestions?: () => void;
 }
 
 const ChatInput = forwardRef<HTMLInputElement, ChatInputProps>(function ChatInput(
-  { value, onValueChange, onSend, disabled, suggestionsOpen, onToggleSuggestions },
+  { value, onValueChange, onSend, onStop, streaming, disabled, suggestionsOpen, onToggleSuggestions },
   ref,
 ) {
   const handleSubmit = (e: React.FormEvent) => {
@@ -69,14 +73,26 @@ const ChatInput = forwardRef<HTMLInputElement, ChatInputProps>(function ChatInpu
           className="min-w-0 flex-1 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-[#75141C] focus:outline-none focus:ring-2 focus:ring-[#75141C]/15 disabled:opacity-50"
         />
         <MicButton onTranscribed={handleTranscribed} disabled={disabled} />
-        <button
-          type="submit"
-          disabled={!value.trim() || disabled}
-          className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-2xl bg-[#75141C] text-white transition-all duration-200 hover:bg-[#5c1018] active:scale-95 disabled:opacity-35 disabled:hover:bg-[#75141C]"
-          aria-label="Enviar"
-        >
-          <HiOutlinePaperAirplane className="text-lg" />
-        </button>
+        {streaming && onStop ? (
+          <button
+            type="button"
+            onClick={onStop}
+            className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-2xl bg-neutral-900 text-white transition-all duration-200 hover:bg-neutral-800 active:scale-95"
+            aria-label="Detener respuesta"
+            title="Detener respuesta"
+          >
+            <HiOutlineStop className="text-lg" />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!value.trim() || disabled}
+            className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-2xl bg-[#75141C] text-white transition-all duration-200 hover:bg-[#5c1018] active:scale-95 disabled:opacity-35 disabled:hover:bg-[#75141C]"
+            aria-label="Enviar"
+          >
+            <HiOutlinePaperAirplane className="text-lg" />
+          </button>
+        )}
       </div>
       <p className="mt-2 font-mono text-[10px] text-neutral-400">
         enter para enviar · mantén el mic para hablar

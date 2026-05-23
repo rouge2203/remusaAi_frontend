@@ -12,7 +12,14 @@ export interface PartDetailPayload {
   unidad?: string;
   precios?: { mayoreo?: number; detalle?: number };
   moneda?: string;
-  bodegas?: Array<{ codigo?: string; nombre?: string; disponible?: number }>;
+  bodegas?: Array<{
+    codigo?: string;
+    nombre?: string;
+    disponible?: number;
+    pedida?: number;
+    transito?: number;
+    reservada?: number;
+  }>;
   aliases?: string[];
   alternos?: string[];
   epc?: string;
@@ -54,6 +61,9 @@ export function parsePartDetail(json: unknown): PartDetailPayload | null {
           codigo: r.codigo != null ? String(r.codigo) : undefined,
           nombre: r.nombre != null ? String(r.nombre) : undefined,
           disponible: numOrUndef(r.disponible),
+          pedida: numOrUndef(r.pedida),
+          transito: numOrUndef(r.transito),
+          reservada: numOrUndef(r.reservada),
         };
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
@@ -118,40 +128,85 @@ export default function PartDetailCard({ data, onAskCompatibleVehicles }: PartDe
 
   const currency = data.moneda?.trim() || "CRC";
 
+  // `null` = not yet attempted; `false` = tried, no diagrams; otherwise an
+  // array of image URLs. Drives the "Diagramas no disponibles" caption.
+  const [illusAttempted, setIllusAttempted] = useState(false);
+
   useEffect(() => {
-    const partNumber = (data.oem_part_number?.trim() || data.codigo.trim());
-    if (!partNumber) {
+    // Pick candidate part numbers in priority order:
+    //   1. The OEM number the model knew about (if set)
+    //   2. The first alias that *looks* OEM-shaped (has a dash, or all
+    //      alphanumeric ≥6 chars) — REMUSA's ARTICULO codes are typically
+    //      not in 17VIN's catalog, but aliases often are.
+    //   3. The REMUSA codigo itself (last resort)
+    const candidates: string[] = [];
+    if (data.oem_part_number?.trim()) candidates.push(data.oem_part_number.trim());
+    const aliases = data.aliases ?? [];
+    const oemShaped = aliases.filter((a) => {
+      const s = a.trim();
+      if (!s) return false;
+      if (/[-]/.test(s) && /\d/.test(s)) return true;
+      return /^[A-Z0-9]{6,}$/i.test(s);
+    });
+    for (const a of oemShaped) {
+      if (!candidates.includes(a)) candidates.push(a);
+    }
+    if (data.codigo.trim() && !candidates.includes(data.codigo.trim())) {
+      candidates.push(data.codigo.trim());
+    }
+
+    if (candidates.length === 0) {
       setIllusUrls([]);
       setIllusLoading(false);
+      setIllusAttempted(true);
       return;
     }
+
     let cancelled = false;
     setIllusLoading(true);
+    setIllusAttempted(false);
+
     (async () => {
-      try {
-        let resolvedEpc = data.epc?.trim() || "";
-        if (!resolvedEpc) {
-          const search = await api.partsSearchExact(partNumber);
-          if (cancelled) return;
-          const results = Array.isArray(search.results) ? search.results : [];
-          for (const r of results) {
-            if (!r || typeof r !== "object") continue;
-            const row = r as Record<string, unknown>;
-            const e = String(row.Epc ?? row.epc ?? "").trim();
-            if (e) {
-              resolvedEpc = e;
-              break;
+      let resolvedEpc = data.epc?.trim() || "";
+      let resolvedPn = candidates[0];
+
+      // Step 1: resolve an EPC by trying each candidate against partsSearchExact.
+      if (!resolvedEpc) {
+        for (const pn of candidates) {
+          try {
+            const search = await api.partsSearchExact(pn);
+            if (cancelled) return;
+            const results = Array.isArray(search.results) ? search.results : [];
+            for (const r of results) {
+              if (!r || typeof r !== "object") continue;
+              const row = r as Record<string, unknown>;
+              const e = String(row.Epc ?? row.epc ?? "").trim();
+              if (e) {
+                resolvedEpc = e;
+                resolvedPn = pn;
+                break;
+              }
             }
+            if (resolvedEpc) break;
+          } catch {
+            // try next candidate
           }
         }
-        if (cancelled) return;
-        if (!resolvedEpc) {
-          setIllusUrls([]);
-          return;
-        }
+      }
+
+      if (cancelled) return;
+      if (!resolvedEpc) {
+        setIllusUrls([]);
+        setIllusLoading(false);
+        setIllusAttempted(true);
+        return;
+      }
+
+      // Step 2: fetch illustration thumbnails for the resolved (epc, pn).
+      try {
         const payload = await api.partsIllustration({
           epc: resolvedEpc,
-          part_number: partNumber,
+          part_number: resolvedPn,
         });
         if (cancelled) return;
         const urls = api.illustrationImageUrls(
@@ -162,13 +217,16 @@ export default function PartDetailCard({ data, onAskCompatibleVehicles }: PartDe
       } catch {
         if (!cancelled) setIllusUrls([]);
       } finally {
-        if (!cancelled) setIllusLoading(false);
+        if (!cancelled) {
+          setIllusLoading(false);
+          setIllusAttempted(true);
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [data.codigo, data.epc, data.oem_part_number]);
+  }, [data.codigo, data.epc, data.oem_part_number, data.aliases]);
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -183,8 +241,19 @@ export default function PartDetailCard({ data, onAskCompatibleVehicles }: PartDe
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [lightboxOpen, onKeyDown]);
 
-  const bodegas = data.bodegas ?? [];
+  const allBodegas = data.bodegas ?? [];
+  // Only show warehouses that actually have something happening: stock on
+  // hand, an incoming PO, or in-transit shipment. Drops the noise of dozens
+  // of all-zero rows while still surfacing "0 disp, 3 en tránsito" cases.
+  const bodegas = allBodegas.filter(
+    (r) =>
+      (r.disponible ?? 0) > 0 ||
+      (r.pedida ?? 0) > 0 ||
+      (r.transito ?? 0) > 0,
+  );
   const totalDisp = bodegas.reduce((s, r) => s + (Number(r.disponible) || 0), 0);
+  const totalPedida = bodegas.reduce((s, r) => s + (Number(r.pedida) || 0), 0);
+  const totalTransito = bodegas.reduce((s, r) => s + (Number(r.transito) || 0), 0);
 
   const aliases = data.aliases ?? [];
   const shownAliases = aliasExpanded ? aliases : aliases.slice(0, ALIAS_PREVIEW);
@@ -318,75 +387,126 @@ export default function PartDetailCard({ data, onAskCompatibleVehicles }: PartDe
             ) : null}
           </div>
 
-          {data.precios &&
-          (data.precios.mayoreo != null || data.precios.detalle != null) ? (
-            <div className="rounded-xl border border-neutral-200/80 bg-white px-3 py-2.5">
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[#75141C]/90">
-                Precios
-              </p>
-              <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-                {data.precios.mayoreo != null ? (
-                  <div className="flex flex-1 items-center justify-between gap-2 rounded-lg bg-neutral-50 px-2.5 py-2 text-[12px]">
-                    <span className="text-neutral-500">Mayoreo</span>
-                    <span className="font-mono font-semibold text-neutral-900">
-                      {money(data.precios.mayoreo, currency)}
-                    </span>
-                  </div>
-                ) : null}
-                {data.precios.detalle != null ? (
-                  <div className="flex flex-1 items-center justify-between gap-2 rounded-lg bg-neutral-50 px-2.5 py-2 text-[12px]">
-                    <span className="text-neutral-500">Detalle</span>
-                    <span className="font-mono font-semibold text-neutral-900">
-                      {money(data.precios.detalle, currency)}
-                    </span>
-                  </div>
-                ) : null}
+          {/* Precios — always render the section. Empty values show "—" so
+              the card looks consistent across parts. */}
+          <div className="rounded-xl border border-neutral-200/80 bg-white px-3 py-2.5">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[#75141C]/90">
+              Precios
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+              <div className="flex flex-1 items-center justify-between gap-2 rounded-lg bg-neutral-50 px-2.5 py-2 text-[12px]">
+                <span className="text-neutral-500">Mayoreo</span>
+                <span className="font-mono font-semibold text-neutral-900">
+                  {data.precios?.mayoreo != null
+                    ? money(data.precios.mayoreo, currency)
+                    : "—"}
+                </span>
+              </div>
+              <div className="flex flex-1 items-center justify-between gap-2 rounded-lg bg-neutral-50 px-2.5 py-2 text-[12px]">
+                <span className="text-neutral-500">Detalle</span>
+                <span className="font-mono font-semibold text-neutral-900">
+                  {data.precios?.detalle != null
+                    ? money(data.precios.detalle, currency)
+                    : "—"}
+                </span>
               </div>
             </div>
-          ) : null}
-
-          {bodegas.length > 0 ? (
-            <div className="rounded-xl border border-neutral-200/80 bg-white px-3 py-2.5">
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[#75141C]/90">
-                Stock por bodega
+            {(data.precios?.mayoreo == null && data.precios?.detalle == null) ? (
+              <p className="mt-2 text-[11px] italic text-neutral-500">
+                Sin precios registrados.
               </p>
-              <ul className="max-h-40 space-y-1.5 overflow-auto text-[11px] text-neutral-800">
-                {bodegas.map((row, i) => (
-                  <li
-                    key={`${row.codigo}-${i}`}
-                    className="flex flex-wrap items-baseline gap-x-2 border-b border-neutral-100 pb-1 last:border-0"
-                  >
-                    {row.codigo ? (
-                      <span className="font-mono font-medium">{row.codigo}</span>
-                    ) : null}
-                    <span className="min-w-0 flex-1 text-neutral-600">
-                      {row.nombre ?? "—"}
+            ) : null}
+          </div>
+
+          {/* Stock — only warehouses with stock on hand, on order, or in
+              transit. If nothing anywhere, show a single explanatory line. */}
+          <div className="rounded-xl border border-neutral-200/80 bg-white px-3 py-2.5">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[#75141C]/90">
+              Stock por bodega
+            </p>
+            {bodegas.length > 0 ? (
+              <>
+                <ul className="max-h-56 space-y-1.5 overflow-auto text-[11px] text-neutral-800">
+                  {bodegas.map((row, i) => {
+                    const disp = row.disponible ?? 0;
+                    const pedida = row.pedida ?? 0;
+                    const transito = row.transito ?? 0;
+                    return (
+                      <li
+                        key={`${row.codigo}-${i}`}
+                        className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-neutral-100 pb-1 last:border-0"
+                      >
+                        {row.codigo ? (
+                          <span className="font-mono font-medium">{row.codigo}</span>
+                        ) : null}
+                        <span className="min-w-0 flex-1 text-neutral-600">
+                          {row.nombre ?? "—"}
+                        </span>
+                        <span className="shrink-0">
+                          Disp:{" "}
+                          <span
+                            className={`font-medium ${
+                              disp > 0 ? "text-neutral-900" : "text-neutral-400"
+                            }`}
+                          >
+                            {disp}
+                          </span>
+                        </span>
+                        {transito > 0 ? (
+                          <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+                            +{transito} en tránsito
+                          </span>
+                        ) : null}
+                        {pedida > 0 ? (
+                          <span className="shrink-0 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-800">
+                            +{pedida} pedida
+                          </span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p
+                  className={`mt-2 border-t border-neutral-100 pt-2 text-[11px] font-medium ${
+                    totalDisp > 0 ? "text-neutral-800" : "text-neutral-500"
+                  }`}
+                >
+                  Total disponible:{" "}
+                  <span className={totalDisp > 0 ? "text-neutral-900" : ""}>
+                    {totalDisp}
+                  </span>
+                  {totalTransito > 0 ? (
+                    <span className="ml-2 text-amber-700">
+                      · {totalTransito} en tránsito
                     </span>
-                    <span className="shrink-0">
-                      Disp:{" "}
-                      <span className="font-medium">
-                        {row.disponible ?? "—"}
-                      </span>
+                  ) : null}
+                  {totalPedida > 0 ? (
+                    <span className="ml-2 text-blue-700">
+                      · {totalPedida} pedida
                     </span>
-                  </li>
-                ))}
-              </ul>
-              {totalDisp > 0 ? (
-                <p className="mt-2 border-t border-neutral-100 pt-2 text-[11px] font-medium text-neutral-800">
-                  Total disponible: {totalDisp}
+                  ) : null}
                 </p>
-              ) : null}
-            </div>
-          ) : null}
+              </>
+            ) : (
+              <p className="text-[11px] italic text-neutral-500">
+                Sin stock disponible y sin órdenes pendientes.
+              </p>
+            )}
+          </div>
 
           {illusLoading ? (
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {[1, 2, 3].map((k) => (
-                <div
-                  key={k}
-                  className="h-20 w-24 shrink-0 animate-pulse rounded-lg bg-neutral-200"
-                />
-              ))}
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[#75141C]/90">
+                Diagrama
+              </p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {[1, 2, 3].map((k) => (
+                  <div
+                    key={k}
+                    className="h-20 w-24 shrink-0 animate-pulse rounded-lg bg-neutral-200"
+                  />
+                ))}
+              </div>
             </div>
           ) : illusUrls.length > 0 ? (
             <div>
@@ -414,6 +534,15 @@ export default function PartDetailCard({ data, onAskCompatibleVehicles }: PartDe
                   </button>
                 ))}
               </div>
+            </div>
+          ) : illusAttempted ? (
+            <div>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+                Diagrama
+              </p>
+              <p className="text-[11px] italic text-neutral-400">
+                Diagramas no disponibles para este artículo.
+              </p>
             </div>
           ) : null}
 

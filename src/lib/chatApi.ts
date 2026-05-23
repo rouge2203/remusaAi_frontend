@@ -1,4 +1,4 @@
-import type { Conversation } from "../types";
+import type { AssistantPart, Conversation } from "../types";
 import { getAccessToken, refresh as refreshToken } from "./authApi";
 
 const API_ROOT = `${import.meta.env.VITE_API_BASE ?? ""}`.replace(/\/$/, "") + "/api";
@@ -51,6 +51,8 @@ export interface ConversationDetail {
     role: "user" | "assistant" | "tool";
     text: string;
     tool_calls: { name: string; input: Record<string, unknown> }[] | null;
+    /** Reconstructed assistant parts (cards + text) — populated only for assistant rows. */
+    parts: AssistantPart[] | null;
     created_at: string;
   }[];
 }
@@ -72,6 +74,147 @@ export async function sendMessage(conversationId: string, text: string): Promise
     method: "POST",
     body: JSON.stringify({ text }),
   });
+}
+
+// ── Streaming chat ────────────────────────────────────────────────────────
+
+export type StreamEvent =
+  | { type: "tool_call"; name: string; input: Record<string, unknown> }
+  | {
+      type: "block";
+      kind:
+        | "remusa-parts"
+        | "remusa-part-detail"
+        | "remusa-doc-list"
+        | "remusa-doc-detail"
+        | "remusa-chart"
+        | "remusa-vehicle";
+      name: string;
+      data: unknown;
+    }
+  | { type: "text"; text: string }
+  | {
+      type: "done";
+      assistant_text: string;
+      input_tokens: number;
+      output_tokens: number;
+      conversation_title: string;
+      is_locked: boolean;
+    }
+  | { type: "error"; detail: string };
+
+/**
+ * Stream the assistant turn as Server-Sent Events. `onEvent` is invoked
+ * synchronously for each parsed event. Resolves when the stream ends; rejects
+ * on transport errors (non-2xx after refresh, network failure). A 409
+ * (conversation locked / cap reached) is surfaced as a thrown
+ * `{ status: 409, data }` matching the shape used elsewhere in this module.
+ */
+export async function sendMessageStream(
+  conversationId: string,
+  text: string,
+  onEvent: (evt: StreamEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const url = `${API_ROOT}/chat/conversations/${conversationId}/messages/`;
+
+  const doFetch = (token: string | null) =>
+    fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        Accept: "text/event-stream",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ text }),
+      signal,
+    });
+
+  let res = await doFetch(getAccessToken());
+  if (res.status === 401) {
+    const refreshed = await refreshToken();
+    if (refreshed) res = await doFetch(refreshed.access);
+  }
+
+  if (!res.ok) {
+    // Non-streaming error responses (e.g. 409 limit_reached) still arrive as JSON.
+    let data: unknown = null;
+    try {
+      data = await res.json();
+    } catch {
+      /* ignore */
+    }
+    throw { status: res.status, data };
+  }
+
+  if (!res.body) {
+    throw new Error("Streaming response has no body");
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+
+  // The fetch signal aborts the request *handshake*; once the body has
+  // started streaming we also need to cancel the reader so an external
+  // ``controller.abort()`` actually stops the loop. Wire that up.
+  const onAbort = () => {
+    reader.cancel().catch(() => {
+      /* the reject below already surfaces the abort */
+    });
+  };
+  if (signal) {
+    if (signal.aborted) {
+      onAbort();
+    } else {
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
+  }
+
+  // Parse SSE frames separated by blank lines. Each frame may contain one or
+  // more `data: ` lines (we only emit single-line `data:` payloads server-side,
+  // but handle the multi-line case for robustness).
+  const processFrame = (frame: string) => {
+    const dataLines: string[] = [];
+    for (const line of frame.split("\n")) {
+      if (line.startsWith("data:")) {
+        dataLines.push(line.slice(5).replace(/^ /, ""));
+      }
+    }
+    if (dataLines.length === 0) return;
+    const payload = dataLines.join("\n");
+    try {
+      onEvent(JSON.parse(payload) as StreamEvent);
+    } catch (err) {
+      console.warn("Failed to parse SSE payload:", payload, err);
+    }
+  };
+
+  try {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { value, done } = await reader.read();
+      if (signal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let sep: number;
+      while ((sep = buffer.indexOf("\n\n")) !== -1) {
+        const frame = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 2);
+        if (frame.length > 0) processFrame(frame);
+      }
+    }
+    // Flush any trailing frame (typical SSE always ends with \n\n but be safe).
+    if (buffer.trim().length > 0) {
+      processFrame(buffer);
+    }
+  } finally {
+    if (signal) signal.removeEventListener("abort", onAbort);
+  }
 }
 
 export async function deleteConversation(id: string): Promise<void> {
@@ -170,6 +313,15 @@ export async function getAdminChat(id: string): Promise<AdminConversationDetail>
 
 export async function searchAdminUsers(q: string): Promise<{ results: AdminUser[] }> {
   return chatFetch(`/admin/users/?search=${encodeURIComponent(q)}`);
+}
+
+export interface AdminUserWithChats extends AdminUser {
+  chat_count: number;
+  last_at: string;
+}
+
+export async function listAdminUsersWithChats(): Promise<{ results: AdminUserWithChats[] }> {
+  return chatFetch("/admin/users-with-chats/");
 }
 
 export async function sendVoiceMessage(
