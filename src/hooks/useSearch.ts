@@ -626,17 +626,17 @@ export function useSearch() {
         /* batch check failed — continue without REMUSA data */
       }
 
-      if (parts.length === 0) {
-        try {
-          const sr = await remusa.remusaSearchCode(code.trim());
-          directRemusa = (sr.results ?? []).map((r) => ({
-            articulo: String(r.articulo ?? ""),
-            desc: String(r.desc ?? ""),
-            source: String(r.source ?? ""),
-          }));
-        } catch {
-          /* REMUSA search failed */
-        }
+      // Always run the REMUSA code/description search so DESCRIPCION matches
+      // surface even when 17VIN also returned parts (deduped in the UI).
+      try {
+        const sr = await remusa.remusaSearchCode(code.trim());
+        directRemusa = (sr.results ?? []).map((r) => ({
+          articulo: String(r.articulo ?? ""),
+          desc: String(r.desc ?? ""),
+          source: String(r.source ?? ""),
+        }));
+      } catch {
+        /* REMUSA search failed */
       }
 
       if (parts.length === 0 && directRemusa.length === 0) {
