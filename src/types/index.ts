@@ -105,8 +105,11 @@ export interface SearchState {
   tecdocModelPicklist: TecdocModelOption[] | null;
   /** REMUSA batch-check results keyed by part number (from part code search). */
   partRemusaMap: Record<string, RemusaHit>;
-  /** Direct REMUSA match when 17VIN returned no results but the code exists in REMUSA. */
-  partDirectRemusa: RemusaHit | null;
+  /**
+   * Direct REMUSA matches when 17VIN returned no results. Includes the exact
+   * code match plus any article whose DESCRIPCION contains the typed value.
+   */
+  partDirectRemusa: RemusaHit[];
 }
 
 /**

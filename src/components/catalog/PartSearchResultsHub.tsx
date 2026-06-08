@@ -5,10 +5,10 @@ import PartSearchDetailSheet from "./PartSearchDetailSheet";
 interface Props {
   parts: PartResult[];
   remusaMap: Record<string, RemusaHit>;
-  directRemusa: RemusaHit | null;
+  directRemusaList: RemusaHit[];
 }
 
-export default function PartSearchResultsHub({ parts, remusaMap, directRemusa }: Props) {
+export default function PartSearchResultsHub({ parts, remusaMap, directRemusaList }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetPart, setSheetPart] = useState<PartResult | null>(null);
   const [sheetRemusa, setSheetRemusa] = useState<RemusaHit | null>(null);
@@ -34,14 +34,14 @@ export default function PartSearchResultsHub({ parts, remusaMap, directRemusa }:
     setSheetOpen(true);
   };
 
-  const openDirectRemusaSheet = () => {
+  const openDirectRemusaSheet = (hit: RemusaHit) => {
     setSheetPart(null);
-    setSheetRemusa(directRemusa);
+    setSheetRemusa(hit);
     setDirectOnly(true);
     setSheetOpen(true);
   };
 
-  const hasDirectOnly = parts.length === 0 && directRemusa;
+  const hasDirectOnly = parts.length === 0 && directRemusaList.length > 0;
 
   return (
     <>
@@ -53,42 +53,47 @@ export default function PartSearchResultsHub({ parts, remusaMap, directRemusa }:
         {hasDirectOnly ? (
           <>
             <p className="mt-2 font-mono text-[11px] font-medium text-[#75141C]">
-              No encontrado en catálogo 17VIN — encontrado en REMUSA
+              {directRemusaList.length === 1
+                ? "No encontrado en catálogo 17VIN — encontrado en REMUSA"
+                : `No encontrado en catálogo 17VIN — ${directRemusaList.length} coincidencias en REMUSA`}
             </p>
             <div className="mt-3 space-y-3 border-t border-neutral-100 pt-3">
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={openDirectRemusaSheet}
-                onKeyDown={(ev) => {
-                  if (ev.key === "Enter" || ev.key === " ") {
-                    ev.preventDefault();
-                    openDirectRemusaSheet();
-                  }
-                }}
-                className="cursor-pointer rounded-xl border border-neutral-200/80 bg-white p-3 shadow-sm ring-1 ring-[#75141C]/12 transition-[box-shadow,border-color] hover:border-neutral-300/90 hover:shadow-md"
-              >
-                <div className="min-w-0">
-                  <p className="font-mono text-[12px] font-semibold leading-snug text-neutral-900">
-                    <span className="text-[#75141C]">★ </span>
-                    {directRemusa.articulo}
-                  </p>
-                  {directRemusa.desc ? (
-                    <p className="font-mono text-[12px] font-semibold leading-snug text-neutral-900 mt-0.5">
-                      {directRemusa.desc}
+              {directRemusaList.map((hit, i) => (
+                <div
+                  key={`${hit.articulo}-${i}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openDirectRemusaSheet(hit)}
+                  onKeyDown={(ev) => {
+                    if (ev.key === "Enter" || ev.key === " ") {
+                      ev.preventDefault();
+                      openDirectRemusaSheet(hit);
+                    }
+                  }}
+                  className="cursor-pointer rounded-xl border border-neutral-200/80 bg-white p-3 shadow-sm ring-1 ring-[#75141C]/12 transition-[box-shadow,border-color] hover:border-neutral-300/90 hover:shadow-md"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-[12px] font-semibold leading-snug text-neutral-900">
+                      <span className="text-[#75141C]">★ </span>
+                      {hit.articulo}
                     </p>
-                  ) : null}
-                  <div className="mt-2.5 border-t border-neutral-100 pt-2.5">
-                    <p className="font-mono text-[10px] font-medium uppercase tracking-wide text-neutral-400">
-                      Código REMUSA
-                    </p>
-                    <p className="mt-0.5 font-mono text-[11px] font-semibold text-[#75141C]">
-                      {directRemusa.articulo}
-                      <span className="font-normal text-neutral-500"> · {directRemusa.source}</span>
-                    </p>
+                    {hit.desc ? (
+                      <p className="font-mono text-[12px] font-semibold leading-snug text-neutral-900 mt-0.5">
+                        {hit.desc}
+                      </p>
+                    ) : null}
+                    <div className="mt-2.5 border-t border-neutral-100 pt-2.5">
+                      <p className="font-mono text-[10px] font-medium uppercase tracking-wide text-neutral-400">
+                        Código REMUSA
+                      </p>
+                      <p className="mt-0.5 font-mono text-[11px] font-semibold text-[#75141C]">
+                        {hit.articulo}
+                        <span className="font-normal text-neutral-500"> · {hit.source}</span>
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
           </>
         ) : (

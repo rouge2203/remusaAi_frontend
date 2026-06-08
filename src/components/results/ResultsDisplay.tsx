@@ -22,7 +22,7 @@ interface ResultsDisplayProps {
   vinDecodeRaw: Record<string, unknown> | null;
   partResults: PartResult[];
   partRemusaMap: Record<string, RemusaHit>;
-  partDirectRemusa: RemusaHit | null;
+  partDirectRemusa: RemusaHit[];
   catalogSession: CatalogSession | null;
   tecdocModelPicklist: TecdocModelOption[] | null;
   tecdocPicklist: TecdocVehicleOption[] | null;
@@ -45,7 +45,7 @@ export default function ResultsDisplay({
   onSelectTecdocModel,
   onSelectTecdocVehicle,
 }: ResultsDisplayProps) {
-  const hasPartData = partResults.length > 0 || partDirectRemusa != null;
+  const hasPartData = partResults.length > 0 || partDirectRemusa.length > 0;
   const hasResults = vehicleInfo || vinDecode || hasPartData;
   if (!hasResults && !catalogSession && !tecdocPicklist?.length && !tecdocModelPicklist?.length)
     return null;
@@ -100,7 +100,7 @@ export default function ResultsDisplay({
         key="part-hub"
         parts={partResults}
         remusaMap={partRemusaMap}
-        directRemusa={partDirectRemusa}
+        directRemusaList={partDirectRemusa}
       />,
     );
   }

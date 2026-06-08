@@ -343,6 +343,23 @@ export async function remusaLookup(partNumber: string): Promise<Record<string, u
   return apiFetch(`/remusa/lookup/${encodeURIComponent(partNumber)}/`);
 }
 
+export type RemusaCodeHit = { articulo: string; desc: string; source: string };
+
+/**
+ * GET /api/remusa/search-code/<pn>/ — multi-result part-code search.
+ * Returns the exact code match first, then every article whose
+ * REMUSA.ARTICULO.DESCRIPCION contains the typed value (source "DESCRIPCION").
+ */
+export async function remusaSearchCode(partNumber: string): Promise<{
+  part_number: string;
+  found: boolean;
+  total: number;
+  truncated: boolean;
+  results: RemusaCodeHit[];
+}> {
+  return apiFetch(`/remusa/search-code/${encodeURIComponent(partNumber)}/`);
+}
+
 export async function remusaDetail(articuloCode: string): Promise<Record<string, unknown>> {
   return apiFetch(`/remusa/detail/${encodeURIComponent(articuloCode)}/`);
 }

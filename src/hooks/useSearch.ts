@@ -54,7 +54,7 @@ function emptyStateBase(): Omit<SearchState, "activeBlock" | "loading" | "loadin
     tecdocPicklist: null,
     tecdocModelPicklist: null,
     partRemusaMap: {},
-    partDirectRemusa: null,
+    partDirectRemusa: [],
   };
 }
 
@@ -615,7 +615,7 @@ export function useSearch() {
       ])).filter(Boolean);
 
       let remusaMap: Record<string, { articulo: string; desc: string; source: string }> = {};
-      let directRemusa: { articulo: string; desc: string; source: string } | null = null;
+      let directRemusa: { articulo: string; desc: string; source: string }[] = [];
 
       try {
         if (allPns.length > 0) {
@@ -628,20 +628,18 @@ export function useSearch() {
 
       if (parts.length === 0) {
         try {
-          const lr = await remusa.remusaLookup(code.trim());
-          if (lr.found) {
-            directRemusa = {
-              articulo: String(lr.articulo ?? ""),
-              desc: String(lr.desc ?? ""),
-              source: String(lr.source ?? ""),
-            };
-          }
+          const sr = await remusa.remusaSearchCode(code.trim());
+          directRemusa = (sr.results ?? []).map((r) => ({
+            articulo: String(r.articulo ?? ""),
+            desc: String(r.desc ?? ""),
+            source: String(r.source ?? ""),
+          }));
         } catch {
-          /* REMUSA lookup failed */
+          /* REMUSA search failed */
         }
       }
 
-      if (parts.length === 0 && !directRemusa) {
+      if (parts.length === 0 && directRemusa.length === 0) {
         setState((prev) => ({
           ...prev,
           loading: false,
