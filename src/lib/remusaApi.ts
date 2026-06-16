@@ -343,7 +343,7 @@ export async function remusaLookup(partNumber: string): Promise<Record<string, u
   return apiFetch(`/remusa/lookup/${encodeURIComponent(partNumber)}/`);
 }
 
-export type RemusaCodeHit = { articulo: string; desc: string; source: string };
+export type RemusaCodeHit = { articulo: string; desc: string; source: string; activo?: boolean };
 
 /**
  * GET /api/remusa/search-code/<pn>/ — multi-result part-code search.
@@ -375,7 +375,7 @@ export async function remusaMatchVehicleOe(epc: string, vin: string): Promise<Re
   });
 }
 
-export type RemusaBatchHit = { articulo: string; desc: string; source: string };
+export type RemusaBatchHit = { articulo: string; desc: string; source: string; activo?: boolean };
 
 /** POST /api/remusa/batch-check/ — maps OE PN -> REMUSA hit (same logic as SistemaRemusa _check_parts_remusa). */
 export async function remusaBatchCheck(partNumbers: string[]): Promise<{

@@ -82,6 +82,8 @@ export interface RemusaHit {
   articulo: string;
   desc: string;
   source: string;
+  /** REMUSA.ARTICULO.ACTIVO — false when the article is inactive. */
+  activo?: boolean;
 }
 
 export interface SearchState {

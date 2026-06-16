@@ -120,6 +120,7 @@ function MainPageContent() {
     state.vehicleInfo ||
     state.vinDecode ||
     state.partResults.length > 0 ||
+    state.partDirectRemusa.length > 0 ||
     state.catalogSession ||
     (state.tecdocPicklist && state.tecdocPicklist.length > 0) ||
     (state.tecdocModelPicklist && state.tecdocModelPicklist.length > 0),

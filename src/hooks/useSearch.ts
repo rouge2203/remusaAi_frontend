@@ -614,8 +614,8 @@ export function useSearch() {
         ...parts.map((p) => p.partNumber),
       ])).filter(Boolean);
 
-      let remusaMap: Record<string, { articulo: string; desc: string; source: string }> = {};
-      let directRemusa: { articulo: string; desc: string; source: string }[] = [];
+      let remusaMap: Record<string, { articulo: string; desc: string; source: string; activo?: boolean }> = {};
+      let directRemusa: { articulo: string; desc: string; source: string; activo?: boolean }[] = [];
 
       try {
         if (allPns.length > 0) {
@@ -634,6 +634,7 @@ export function useSearch() {
           articulo: String(r.articulo ?? ""),
           desc: String(r.desc ?? ""),
           source: String(r.source ?? ""),
+          activo: r.activo,
         }));
       } catch {
         /* REMUSA search failed */
