@@ -18,6 +18,7 @@ import {
 } from "../../constants/catalogLoadingMessages";
 import { MenuTerminalRow } from "../menu/MenuTerminalRow";
 import DiagramLightbox from "./DiagramLightbox";
+import CrossesPanel from "./CrossesPanel";
 import { moneyCRC } from "./PartDetailShared";
 
 const CARD =
@@ -136,6 +137,7 @@ export default function TecdocArticleDetailSheet({
   const [actionPayload, setActionPayload] = useState<unknown>(null);
   const [actionErr, setActionErr] = useState<string | null>(null);
   const [subPanel, setSubPanel] = useState<"oems" | "cars" | null>(null);
+  const [crossesPn, setCrossesPn] = useState<string | null>(null);
   const [imgOpen, setImgOpen] = useState(false);
   const [collapseDetailSections, setCollapseDetailSections] = useState(false);
 
@@ -189,6 +191,7 @@ export default function TecdocArticleDetailSheet({
       setActionErr(null);
       setSubPanel(null);
       setRemusaDetail(null);
+      setCrossesPn(null);
       setCollapseDetailSections(false);
       return;
     }
@@ -219,19 +222,13 @@ export default function TecdocArticleDetailSheet({
 
   const fallbackStr = [artNo, ...oemCodes].filter(Boolean).join(",");
 
-  const onEquiv = async () => {
+  const onEquiv = () => {
     const searchPn = oemCodes[0] ?? artNo;
     if (!searchPn) return;
     setCollapseDetailSections(true);
-    setActionKey("e");
+    setActionPayload(null);
     setActionErr(null);
-    try {
-      setActionPayload(await api.remusaEquivSearch(searchPn));
-    } catch (e) {
-      setActionErr(e instanceof Error ? e.message : "Error");
-    } finally {
-      setActionKey(null);
-    }
+    setCrossesPn(searchPn);
   };
 
   const specs =
@@ -267,13 +264,11 @@ export default function TecdocArticleDetailSheet({
         subtitle: "recargar desde inventario",
       });
     }
-    if (!remusaEntry && !articuloResolved) {
-      items.push({
-        id: "e",
-        title: "buscar equivalencias en REMUSA",
-        subtitle: "cross-ref por número TecDoc / OEM",
-      });
-    }
+    items.push({
+      id: "e",
+      title: "cruces y equivalencias",
+      subtitle: "17VIN + TecDoc · verificado contra REMUSA",
+    });
     if (oemCodes[0]) {
       items.push({
         id: "2",
@@ -315,7 +310,7 @@ export default function TecdocArticleDetailSheet({
         return;
       }
       if (item.id === "e") {
-        void onEquiv();
+        onEquiv();
         return;
       }
       if (item.id === "2") {
@@ -708,6 +703,12 @@ export default function TecdocArticleDetailSheet({
                 <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 shadow-sm">
                   {actionErr}
                 </div>
+              ) : null}
+              {crossesPn ? (
+                <CrossesPanel
+                  partNumber={crossesPn}
+                  onSelectRemusa={(art) => void loadRemusa(art)}
+                />
               ) : null}
               {actionPayload != null && !actionKey ? (
                 <div className="rounded-2xl border border-neutral-200/90 bg-white p-3 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)]">

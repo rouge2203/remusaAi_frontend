@@ -3,6 +3,11 @@ import type { MenuItem } from "./remusaMenu";
 /** OEM sheet actions when part already maps to REMUSA. */
 export const PART_DETAIL_MENU_MATCH: MenuItem[] = [
   {
+    id: "e",
+    title: "cruces y equivalencias",
+    subtitle: "17VIN + TecDoc · verificado contra REMUSA",
+  },
+  {
     id: "t",
     title: "buscar en tecdoc",
     subtitle: "specs, imagen, autos compatibles",
@@ -73,7 +78,7 @@ export const PART_DETAIL_MENU_NOMATCH: MenuItem[] = [
   },
   {
     id: "e",
-    title: "buscar en remusa por equivalencias",
-    subtitle: "cross-ref 17VIN",
+    title: "cruces y equivalencias",
+    subtitle: "17VIN + TecDoc · verificado contra REMUSA",
   },
 ];

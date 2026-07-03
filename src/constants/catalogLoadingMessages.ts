@@ -92,8 +92,9 @@ export const PART_DETAIL_LOADING_MESSAGES = {
     "Cargando diagrama y posición...",
   ],
   e: [
-    "Equivalencias REMUSA (cross-ref)...",
-    "Consultando intercambio 17VIN...",
+    "Cruces y equivalencias...",
+    "Consultando 17VIN + TecDoc...",
+    "Verificando inventario REMUSA...",
   ],
 } as const;
 

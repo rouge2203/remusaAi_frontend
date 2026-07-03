@@ -17,6 +17,8 @@ import {
 import type { MenuItem } from "../../constants/remusaMenu";
 import { MenuTerminalRow } from "../menu/MenuTerminalRow";
 import { PartMedia } from "./PartMedia";
+import CrossesPanel from "./CrossesPanel";
+import { ArticlePhoto } from "./ArticlePhoto";
 import {
   oeStr,
   moneyCRC,
@@ -25,8 +27,6 @@ import {
   VehicleListView,
   TecdocResultView,
 } from "./PartDetailShared";
-
-type EquivRow = Record<string, unknown>;
 
 export default function PartSearchDetailSheet({
   open,
@@ -51,8 +51,7 @@ export default function PartSearchDetailSheet({
   const [actionPayload, setActionPayload] = useState<unknown>(null);
   const [lastActionId, setLastActionId] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState<string | null>(null);
-  const [equivRows, setEquivRows] = useState<EquivRow[] | null>(null);
-  const [equivNote, setEquivNote] = useState<string | null>(null);
+  const [crossesPn, setCrossesPn] = useState<string | null>(null);
   const [collapseDetailSections, setCollapseDetailSections] = useState(false);
 
   const pn = directOnly
@@ -87,8 +86,7 @@ export default function PartSearchDetailSheet({
       setActionPayload(null);
       setLastActionId(null);
       setActionErr(null);
-      setEquivRows(null);
-      setEquivNote(null);
+      setCrossesPn(null);
       setCollapseDetailSections(false);
       return;
     }
@@ -98,8 +96,7 @@ export default function PartSearchDetailSheet({
     setActionPayload(null);
     setLastActionId(null);
     setActionErr(null);
-    setEquivRows(null);
-    setEquivNote(null);
+    setCrossesPn(null);
     setCollapseDetailSections(false);
 
     if (remusaHit?.articulo) void loadRemusaDetail(remusaHit.articulo);
@@ -145,35 +142,13 @@ export default function PartSearchDetailSheet({
     }
   };
 
-  const onEquivSearch = async () => {
+  const onShowCrosses = () => {
     if (!pn) return;
     setCollapseDetailSections(true);
-    setActionKey("e");
-    setLastActionId("e");
+    setActionPayload(null);
+    setLastActionId(null);
     setActionErr(null);
-    setEquivRows(null);
-    setEquivNote(null);
-    try {
-      const r = await api.remusaEquivSearch(pn);
-      const matches = (r.matches as EquivRow[]) ?? [];
-      setEquivRows(matches);
-      setEquivNote(
-        matches.length === 0
-          ? "Ninguna equivalencia encontrada en REMUSA."
-          : `${matches.length} equivalencia(s) en REMUSA.`,
-      );
-      setActionPayload(r);
-    } catch (e) {
-      setActionErr(e instanceof Error ? e.message : "Error");
-      setEquivRows(null);
-    } finally {
-      setActionKey(null);
-    }
-  };
-
-  const onSelectEquiv = (row: EquivRow) => {
-    const art = String(row.articulo ?? "").trim();
-    if (art) void loadRemusaDetail(art);
+    setCrossesPn(pn);
   };
 
   const onMenuSelect = (item: MenuItem) => {
@@ -183,7 +158,7 @@ export default function PartSearchDetailSheet({
         ? [pn, articuloResolved].filter(Boolean).join(",")
         : undefined;
     if (item.id === "e") {
-      void onEquivSearch();
+      onShowCrosses();
       return;
     }
     const key = item.id as PartDetailLoadingKey;
@@ -255,6 +230,15 @@ export default function PartSearchDetailSheet({
 
   const remusaBlock = (
     <SheetSection title="REMUSA" collapseSignal={collapseDetailSections}>
+      {articuloResolved ? (
+        <div className="mb-2">
+          <ArticlePhoto
+            articulo={String(articuloResolved)}
+            withCaption
+            className="h-32 w-full object-contain"
+          />
+        </div>
+      ) : null}
       {remusaLoading ? (
         <TerminalLoader
           messages={[...PART_DETAIL_REMUSA_DETAIL_MESSAGES]}
@@ -438,43 +422,11 @@ export default function PartSearchDetailSheet({
                 </p>
               ) : null}
 
-              {equivNote ? (
-                <p
-                  className={`rounded-xl border px-3 py-2 text-[11px] shadow-sm ${
-                    equivRows?.length
-                      ? "border-[#75141C]/20 bg-[#75141C]/5 text-[#75141C]"
-                      : "border-amber-200/80 bg-amber-50/90 text-amber-900"
-                  }`}
-                >
-                  {equivRows?.length ? "✔ " : "⚠ "}
-                  {equivNote}
-                </p>
-              ) : null}
-              {equivRows && equivRows.length > 0 ? (
-                <ul className="flex flex-col gap-1.5">
-                  {equivRows.map((row, i) => {
-                    const eqPn = String(row.part_number ?? row.pn ?? i);
-                    const art = String(row.articulo ?? "").trim();
-                    return (
-                      <li key={`${eqPn}-${i}`}>
-                        <button
-                          type="button"
-                          onClick={() => onSelectEquiv(row)}
-                          className="w-full rounded-xl border border-[#75141C]/25 bg-white px-3 py-2 text-left text-[11px] text-[#75141C] shadow-sm transition hover:border-[#75141C]/40 hover:bg-[#75141C]/5"
-                        >
-                          <span className="font-semibold text-neutral-900">
-                            {eqPn}
-                          </span>
-                          {art ? (
-                            <span className="mt-0.5 block text-neutral-600">
-                              → {art}
-                            </span>
-                          ) : null}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+              {crossesPn ? (
+                <CrossesPanel
+                  partNumber={crossesPn}
+                  onSelectRemusa={(art) => void loadRemusaDetail(art)}
+                />
               ) : null}
 
               {!directOnly ? (

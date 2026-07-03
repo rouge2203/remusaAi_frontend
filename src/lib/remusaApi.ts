@@ -368,6 +368,73 @@ export async function remusaEquivSearch(partNumber: string): Promise<Record<stri
   return apiFetch(`/remusa/equiv-search/${encodeURIComponent(partNumber)}/`);
 }
 
+// --- Crosses (unified 17VIN + TecDoc cross-reference aggregator) ---
+
+export type CrossRemusa = { articulo: string; desc: string; source: string; activo?: boolean };
+
+/** One cross candidate, merged across sources by normalized number. */
+export type CrossItem = {
+  number: string;
+  display: string;
+  brands: string[];
+  names: string[];
+  /** Provenance: 17VIN_OE | 17VIN_AFT | TECDOC_OEM | TECDOC_ART */
+  sources: string[];
+  distance: number | null;
+  image: string | null;
+  remusa: CrossRemusa | null;
+};
+
+export type TecdocCrossArticle = {
+  article_id: number | null;
+  article_no: string | null;
+  supplier: string | null;
+  product_name: string | null;
+  image: string | null;
+  remusa: CrossRemusa | null;
+};
+
+export type CrossesResponse = {
+  part_number: string;
+  normalized: string;
+  remusa_direct: CrossRemusa[];
+  crosses: CrossItem[];
+  tecdoc_articles: TecdocCrossArticle[];
+  stats: {
+    total_crosses: number;
+    remusa_matched: number;
+    tecdoc_articles: number;
+    by_source: Record<string, number>;
+  };
+};
+
+/**
+ * GET /api/parts/crosses/<pn>/ — every equivalence 17VIN + TecDoc know about,
+ * each candidate checked against REMUSA inventory.
+ */
+export async function partCrosses(partNumber: string): Promise<CrossesResponse> {
+  return apiFetch(`/parts/crosses/${encodeURIComponent(partNumber)}/`);
+}
+
+export type ArticleImageResult = {
+  found: boolean;
+  articulo: string;
+  image?: string;
+  supplier?: string;
+  article_no?: string;
+  product_name?: string;
+  matched_number?: string;
+  tecdoc_article_id?: number;
+};
+
+/**
+ * GET /api/remusa/article-image/<articulo>/ — TecDoc product photo for a
+ * REMUSA articulo (resolved via its aliases; cached server-side).
+ */
+export async function remusaArticleImage(articuloCode: string): Promise<ArticleImageResult> {
+  return apiFetch(`/remusa/article-image/${encodeURIComponent(articuloCode)}/`);
+}
+
 export async function remusaMatchVehicleOe(epc: string, vin: string): Promise<Record<string, unknown>> {
   return apiFetch("/remusa/match-vehicle-oe/", {
     method: "POST",

@@ -3,6 +3,7 @@ import { HiOutlineArchiveBox } from "react-icons/hi2";
 import type { PartResult, RemusaHit } from "../../types";
 import PartSearchDetailSheet from "./PartSearchDetailSheet";
 import CollapsibleResultCard from "../results/CollapsibleResultCard";
+import { ArticlePhoto } from "./ArticlePhoto";
 
 interface Props {
   parts: PartResult[];
@@ -101,33 +102,36 @@ export default function PartSearchResultsHub({ parts, remusaMap, directRemusaLis
           hit ? "ring-1 ring-[#75141C]/12" : ""
         }`}
       >
-        <div className="min-w-0">
-          <p className="font-mono text-[12px] font-semibold leading-snug text-neutral-900">
-            {hit ? <span className="text-[#75141C]">★ </span> : null}
-            {p.partNumber}
-          </p>
-          {hit?.desc ? (
-            <p className="font-mono text-[12px] font-semibold leading-snug text-neutral-900 mt-0.5">
-              {hit.desc}
+        <div className="flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-[12px] font-semibold leading-snug text-neutral-900">
+              {hit ? <span className="text-[#75141C]">★ </span> : null}
+              {p.partNumber}
             </p>
-          ) : null}
-          {p.partNameEn ? (
-            <p className="mt-1.5 text-xs leading-relaxed text-neutral-500">{p.partNameEn}</p>
-          ) : null}
-          {hit ? (
-            <div className="mt-2.5 border-t border-neutral-100 pt-2.5">
-              <p className="font-mono text-[10px] font-medium uppercase tracking-wide text-neutral-400">
-                Código REMUSA
+            {hit?.desc ? (
+              <p className="font-mono text-[12px] font-semibold leading-snug text-neutral-900 mt-0.5">
+                {hit.desc}
               </p>
-              <p className="mt-0.5 flex items-center gap-2 font-mono text-[11px] font-semibold text-[#75141C]">
-                <span className="min-w-0 truncate">
-                  {hit.articulo}
-                  <span className="font-normal text-neutral-500"> · {hit.source}</span>
-                </span>
-                {inactive ? <InactiveBadge /> : null}
-              </p>
-            </div>
-          ) : null}
+            ) : null}
+            {p.partNameEn ? (
+              <p className="mt-1.5 text-xs leading-relaxed text-neutral-500">{p.partNameEn}</p>
+            ) : null}
+            {hit ? (
+              <div className="mt-2.5 border-t border-neutral-100 pt-2.5">
+                <p className="font-mono text-[10px] font-medium uppercase tracking-wide text-neutral-400">
+                  Código REMUSA
+                </p>
+                <p className="mt-0.5 flex items-center gap-2 font-mono text-[11px] font-semibold text-[#75141C]">
+                  <span className="min-w-0 truncate">
+                    {hit.articulo}
+                    <span className="font-normal text-neutral-500"> · {hit.source}</span>
+                  </span>
+                  {inactive ? <InactiveBadge /> : null}
+                </p>
+              </div>
+            ) : null}
+          </div>
+          {hit ? <ArticlePhoto articulo={hit.articulo} /> : null}
         </div>
       </div>
     );
@@ -150,28 +154,31 @@ export default function PartSearchResultsHub({ parts, remusaMap, directRemusaLis
         }}
         className="cursor-pointer rounded-xl border border-neutral-200/80 bg-white p-3 shadow-sm ring-1 ring-[#75141C]/12 transition-[box-shadow,border-color] hover:border-neutral-300/90 hover:shadow-md"
       >
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 font-mono text-[12px] font-semibold leading-snug text-neutral-900">
-            <span className="min-w-0 truncate">
-              <span className="text-[#75141C]">★ </span>
-              {hit.articulo}
-            </span>
-            {inactive ? <InactiveBadge /> : null}
-          </p>
-          {hit.desc ? (
-            <p className="font-mono text-[12px] font-semibold leading-snug text-neutral-900 mt-0.5">
-              {hit.desc}
+        <div className="flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-2 font-mono text-[12px] font-semibold leading-snug text-neutral-900">
+              <span className="min-w-0 truncate">
+                <span className="text-[#75141C]">★ </span>
+                {hit.articulo}
+              </span>
+              {inactive ? <InactiveBadge /> : null}
             </p>
-          ) : null}
-          <div className="mt-2.5 border-t border-neutral-100 pt-2.5">
-            <p className="font-mono text-[10px] font-medium uppercase tracking-wide text-neutral-400">
-              Código REMUSA
-            </p>
-            <p className="mt-0.5 font-mono text-[11px] font-semibold text-[#75141C]">
-              {hit.articulo}
-              <span className="font-normal text-neutral-500"> · {hit.source}</span>
-            </p>
+            {hit.desc ? (
+              <p className="font-mono text-[12px] font-semibold leading-snug text-neutral-900 mt-0.5">
+                {hit.desc}
+              </p>
+            ) : null}
+            <div className="mt-2.5 border-t border-neutral-100 pt-2.5">
+              <p className="font-mono text-[10px] font-medium uppercase tracking-wide text-neutral-400">
+                Código REMUSA
+              </p>
+              <p className="mt-0.5 font-mono text-[11px] font-semibold text-[#75141C]">
+                {hit.articulo}
+                <span className="font-normal text-neutral-500"> · {hit.source}</span>
+              </p>
+            </div>
           </div>
+          <ArticlePhoto articulo={hit.articulo} />
         </div>
       </div>
     );
